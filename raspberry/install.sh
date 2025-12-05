@@ -71,6 +71,7 @@ echo -e "${YELLOW}📁 Création du répertoire d'installation...${NC}"
 mkdir -p $INSTALL_DIR
 mkdir -p $INSTALL_DIR/data
 mkdir -p $INSTALL_DIR/logs
+mkdir -p $INSTALL_DIR/raspberry/config
 
 echo -e "${YELLOW}📝 Copie des fichiers...${NC}"
 # Déterminer le répertoire source du projet
