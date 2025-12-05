@@ -1,0 +1,24 @@
+# Force LF line endings for all text files
+* text=auto
+
+# Shell scripts must use LF
+*.sh text eol=lf
+
+# Python files must use LF
+*.py text eol=lf
+
+# Markdown files
+*.md text eol=lf
+
+# JSON files
+*.json text eol=lf
+
+# HTML/CSS/JS files
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+
+# Configuration files
+*.conf text eol=lf
+*.config text eol=lf
+*.template text eol=lf

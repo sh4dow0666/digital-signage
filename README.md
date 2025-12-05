@@ -13,19 +13,38 @@ A Flask-based multi-screen display management system for Raspberry Pi devices. C
 
 ## Quick Start
 
-### Installation
+### For Raspberry Pi (Automated Installation)
 
-1. Install dependencies:
+**One-line installation (recommended):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sh4dow0666/digital-signage/main/bootstrap.sh | bash
+```
+
+This script will:
+- Clone the repository
+- Install all dependencies
+- Configure raspi-config automatically (autologin, screen blanking)
+- Set up systemd service
+- Configure kiosk mode
+- Fix line endings
+
+After installation, reboot: `sudo reboot`
+
+### For Development/Server
+
+1. Clone the repository:
+```bash
+git clone https://github.com/sh4dow0666/digital-signage.git
+cd digital-signage
+```
+
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-Or use the installation script:
-```bash
-bash install.sh
-```
-
-2. Run the server:
+3. Run the server:
 ```bash
 python gestion_raspberry.py
 ```

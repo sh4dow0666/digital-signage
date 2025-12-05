@@ -31,6 +31,20 @@ echo -e "${YELLOW}📦 Mise à jour du système...${NC}"
 apt-get update
 apt-get upgrade -y
 
+echo -e "${YELLOW}⚙️  Configuration automatique de raspi-config...${NC}"
+# Configuration du boot automatique en mode desktop
+if command -v raspi-config >/dev/null 2>&1; then
+    echo -e "${BLUE}   → Activation de l'autologin desktop...${NC}"
+    raspi-config nonint do_boot_behaviour B4 2>/dev/null || echo -e "${YELLOW}   ⚠️  Configuration autologin manuelle requise${NC}"
+
+    echo -e "${BLUE}   → Désactivation du screen blanking...${NC}"
+    raspi-config nonint do_blanking 1 2>/dev/null || echo -e "${YELLOW}   ⚠️  Configuration screen blanking manuelle requise${NC}"
+
+    echo -e "${GREEN}   ✅ Configuration raspi-config terminée${NC}"
+else
+    echo -e "${YELLOW}   ⚠️  raspi-config non disponible (pas sur Raspberry Pi ?)${NC}"
+fi
+
 echo -e "${YELLOW}📦 Installation des dépendances...${NC}"
 apt-get install -y \
     python3 \
@@ -59,8 +73,17 @@ mkdir -p $INSTALL_DIR/data
 mkdir -p $INSTALL_DIR/logs
 
 echo -e "${YELLOW}📝 Copie des fichiers...${NC}"
+# Déterminer le répertoire source du projet
+SOURCE_DIR="/home/$USER/DS"
+if [ ! -d "$SOURCE_DIR" ]; then
+    # Si on n'est pas dans le répertoire par défaut, utiliser le répertoire du script
+    SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fi
+
 # Copier tous les fichiers du projet
-cp -r /home/$USER/DS/* $INSTALL_DIR/
+echo -e "${BLUE}   → Source: $SOURCE_DIR${NC}"
+echo -e "${BLUE}   → Destination: $INSTALL_DIR${NC}"
+cp -r "$SOURCE_DIR"/* $INSTALL_DIR/
 chmod +x $INSTALL_DIR/raspberry/scripts/*.sh
 
 echo -e "${YELLOW}⚙️  Configuration des fichiers de configuration...${NC}"

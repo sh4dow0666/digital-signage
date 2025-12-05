@@ -42,27 +42,36 @@
 
 ```bash
 # Connecter écran + clavier + alimentation
-
-# Mettre à jour
-sudo apt update && sudo apt upgrade -y
-
-# Configurer
-sudo raspi-config
-# → Boot Options → Desktop Autologin
-# → Display Options → Screen Blanking → No
-# → Finish → Reboot
+# Assurer que le Pi est connecté à internet (WiFi ou Ethernet)
 ```
 
-### 3️⃣ Installer Digital Signage
+### 3️⃣ Installer Digital Signage (TOUT AUTOMATIQUE)
+
+**Option A - Installation en une ligne (recommandé) :**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sh4dow0666/digital-signage/main/bootstrap.sh | bash
+```
+
+**Option B - Installation manuelle :**
 
 ```bash
 cd ~
-git clone [URL_REPO] DS
+git clone https://github.com/sh4dow0666/digital-signage.git DS
 cd DS
-chmod +x raspberry/install.sh
-sudo raspberry/install.sh
-sudo reboot
+chmod +x bootstrap.sh
+./bootstrap.sh
 ```
+
+**Le script fait TOUT automatiquement :**
+- ✅ Clone le repository GitHub
+- ✅ Installe toutes les dépendances
+- ✅ Configure raspi-config (autologin, screen blanking)
+- ✅ Configure le service systemd
+- ✅ Normalise les fins de lignes des scripts
+- ✅ Configure le mode kiosk
+
+Après installation : `sudo reboot`
 
 ### 4️⃣ Configuration automatique
 
