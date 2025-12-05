@@ -394,7 +394,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(config)
+                    body: JSON.stringify()
                 });
 
                 const data = await response.json();
@@ -405,10 +405,13 @@
                     document.getElementById('step' + currentStep).classList.add('active');
                     updateProgress();
 
-                    // Attendre 3 secondes avant de fermer
-                    setTimeout(() => {
-                        window.close();
-                    }, 3000);
+                    response = await fetch('/system', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({"action": "reboot"})
+                    });
                 } else {
                     alert('Erreur: ' + data.error);
                 }

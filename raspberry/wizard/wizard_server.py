@@ -50,6 +50,24 @@ def get_config():
     config = read_config()
     return jsonify(config)
 
+@app.route('/system', methods=['POST'])
+def system_action():
+    """Effectuer une action système (reboot, shutdown)"""
+    data = request.json
+    action = data.get('action')
+
+    try:
+        if action == 'reboot':
+            subprocess.run(['sudo', 'reboot'], check=True)
+            return jsonify({'success': True, 'message': 'Redémarrage en cours...'})
+        elif action == 'shutdown':
+            subprocess.run(['sudo', 'shutdown', 'now'], check=True)
+            return jsonify({'success': True, 'message': 'Arrêt en cours...'})
+        else:
+            return jsonify({'error': 'Action inconnue'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/config', methods=['POST'])
 def save_config():
     """Sauvegarder la configuration"""
