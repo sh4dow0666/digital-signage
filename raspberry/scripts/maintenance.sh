@@ -96,7 +96,7 @@ relaunch_wizard() {
     read -p "Êtes-vous sûr? (o/N): " confirm
 
     if [ "$confirm" = "o" ] || [ "$confirm" = "O" ]; then
-        sed -i 's/CONFIGURED=.*/CONFIGURED=false/' $CONFIG_FILE
+        sed -i 's/CONFIGURED=.*/CONFIGURED="false"/' $CONFIG_FILE
         echo -e "${GREEN}✅ Configuration réinitialisée${NC}"
         echo ""
         read -p "Redémarrer maintenant? (o/N): " reboot_now
@@ -130,9 +130,11 @@ manual_config() {
         read -p "URL contrôleur: " controller_url
     fi
 
-    # Sauvegarder
-    sed -i "s/ROLE_CONTROLLER=.*/ROLE_CONTROLLER=${ctrl:-n}/" $CONFIG_FILE
-    sed -i "s/ROLE_PLAYER=.*/ROLE_PLAYER=${play:-n}/" $CONFIG_FILE
+    # Sauvegarder (convertir o/n en true/false et ajouter guillemets)
+    ctrl_value=$( [ "$ctrl" = "o" ] || [ "$ctrl" = "O" ] && echo "true" || echo "false" )
+    play_value=$( [ "$play" = "o" ] || [ "$play" = "O" ] && echo "true" || echo "false" )
+    sed -i "s/ROLE_CONTROLLER=.*/ROLE_CONTROLLER=\"${ctrl_value}\"/" $CONFIG_FILE
+    sed -i "s/ROLE_PLAYER=.*/ROLE_PLAYER=\"${play_value}\"/" $CONFIG_FILE
 
     if [ "$play" = "o" ] || [ "$play" = "O" ]; then
         sed -i "s/SCREEN_ID=.*/SCREEN_ID=\"$screen_id\"/" $CONFIG_FILE
@@ -174,9 +176,9 @@ factory_reset() {
         # Réinitialiser la config
         cat > $CONFIG_FILE << 'EOF'
 # Configuration du dispositif Digital Signage
-CONFIGURED=false
-ROLE_CONTROLLER=false
-ROLE_PLAYER=false
+CONFIGURED="false"
+ROLE_CONTROLLER="false"
+ROLE_PLAYER="false"
 SCREEN_ID=""
 SCREEN_NAME=""
 SCREEN_LOCATION=""

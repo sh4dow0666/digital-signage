@@ -33,7 +33,8 @@ def write_config(config):
         for key, value in config.items():
             if isinstance(value, bool):
                 value = 'true' if value else 'false'
-            f.write(f'{key}={value}\n')
+            # Mettre les valeurs entre guillemets pour gérer les espaces
+            f.write(f'{key}="{value}"\n')
 
 @app.route('/')
 def index():

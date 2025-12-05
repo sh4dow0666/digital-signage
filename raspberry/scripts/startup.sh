@@ -114,8 +114,13 @@ if [ "$ROLE_PLAYER" = "true" ]; then
         sleep 5
     fi
 
-    # Construire l'URL du display
-    DISPLAY_URL="${CONTROLLER_URL}/display?id=${SCREEN_ID}&name=${SCREEN_NAME}&location=${SCREEN_LOCATION}"
+    # Construire l'URL du display (URL encode les paramètres avec espaces)
+    # Encoder les espaces pour l'URL
+    SCREEN_ID_ENCODED=$(echo "$SCREEN_ID" | sed 's/ /%20/g')
+    SCREEN_NAME_ENCODED=$(echo "$SCREEN_NAME" | sed 's/ /%20/g')
+    SCREEN_LOCATION_ENCODED=$(echo "$SCREEN_LOCATION" | sed 's/ /%20/g')
+
+    DISPLAY_URL="${CONTROLLER_URL}/display?id=${SCREEN_ID_ENCODED}&name=${SCREEN_NAME_ENCODED}&location=${SCREEN_LOCATION_ENCODED}"
 
     # Afficher d'abord la page d'information pendant 10 secondes
     DISPLAY=:0 chromium \
@@ -126,7 +131,7 @@ if [ "$ROLE_PLAYER" = "true" ]; then
         --disable-restore-session-state \
         --password-store=basic \
         --start-maximized \
-        "file://$BASE_DIR/raspberry/wizard/screen_info.html?id=${SCREEN_ID}&name=${SCREEN_NAME}&location=${SCREEN_LOCATION}&controller=${CONTROLLER_URL}" &
+        "file://$BASE_DIR/raspberry/wizard/screen_info.html?id=${SCREEN_ID_ENCODED}&name=${SCREEN_NAME_ENCODED}&location=${SCREEN_LOCATION_ENCODED}&controller=${CONTROLLER_URL}" &
 
     sleep 10
 

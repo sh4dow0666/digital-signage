@@ -61,6 +61,9 @@ apt-get install -y \
     git
 
 # Désactiver hostapd et dnsmasq par défaut (seront activés si besoin)
+# D'abord unmask si nécessaire, puis arrêter et désactiver
+systemctl unmask hostapd 2>/dev/null || true
+systemctl unmask dnsmasq 2>/dev/null || true
 systemctl stop hostapd 2>/dev/null || true
 systemctl stop dnsmasq 2>/dev/null || true
 systemctl disable hostapd 2>/dev/null || true
@@ -94,9 +97,9 @@ echo -e "${YELLOW}⚙️  Configuration des fichiers de configuration...${NC}"
 if [ ! -f "$INSTALL_DIR/raspberry/config/device.conf" ]; then
     cat > $INSTALL_DIR/raspberry/config/device.conf << 'EOF'
 # Configuration du dispositif Digital Signage
-CONFIGURED=false
-ROLE_CONTROLLER=false
-ROLE_PLAYER=false
+CONFIGURED="false"
+ROLE_CONTROLLER="false"
+ROLE_PLAYER="false"
 SCREEN_ID=""
 SCREEN_NAME=""
 SCREEN_LOCATION=""
