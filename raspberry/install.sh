@@ -14,7 +14,9 @@ NC='\033[0m' # No Color
 # Variables
 INSTALL_DIR="/opt/digital-signage"
 SERVICE_NAME="digital-signage"
-USER="pi"
+
+# recupere le user actuel
+USER=$(logname 2>/dev/null || echo $USER)
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║  Installation Digital Signage pour Raspberry Pi 3         ║${NC}"
