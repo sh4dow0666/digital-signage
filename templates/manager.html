@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionnaire d'Affichage Multi-Écrans</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🖥️ Gestionnaire d'Affichage Multi-Écrans</h1>
+            <p class="subtitle">Contrôlez tous vos écrans depuis une seule interface</p>
+        </header>
+
+        <!-- Modal Gestion Globale Playlists -->
+        <div id="global-playlist-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>📋 Gestion des Playlists</h2>
+                    <button class="close-modal" onclick="closeGlobalPlaylistModal()">&times;</button>
+                </div>
+                <div class="content-form">
+                    <button class="btn" onclick="openCreatePlaylistModal()" style="margin-bottom: 20px;">+ Créer une Playlist</button>
+                    
+                    <div id="playlists-list" class="content-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Créer/Éditer Playlist -->
+        <div id="edit-playlist-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="edit-playlist-title">📋 Créer une Playlist</h2>
+                    <button class="close-modal" onclick="closeEditPlaylistModal()">&times;</button>
+                </div>
+                <div class="content-form">
+                    <input type="hidden" id="edit-playlist-id">
+                    <div class="form-group">
+                        <label>Nom de la playlist</label>
+                        <input type="text" id="edit-playlist-name" placeholder="Ex: Playlist Accueil">
+                    </div>
+                    <div class="form-group">
+                        <label>Ajouter des contenus</label>
+                        <select id="edit-playlist-content-select" onchange="updateSelectedContentInfo()">
+                            <option value="">Choisir un contenu...</option>
+                        </select>
+                        <div id="selected-content-info" style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px; display: none;">
+                            <div style="font-size: 0.9em; color: #333;">
+                                <strong>Durée:</strong> <span id="selected-content-duration">--</span>
+                            </div>
+                        </div>
+                        <button class="btn" onclick="addToEditPlaylist()" style="margin-top: 10px; width: 100%;">+ Ajouter à la playlist</button>
+                    </div>
+                    <div class="form-group">
+                        <label>Contenus de la playlist</label>
+                        <div id="edit-playlist-items" class="playlist-preview">
+                            <p style="text-align: center; color: #999;">Aucun contenu ajouté</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-playlist" onclick="saveEditedPlaylist()">💾 Sauvegarder la Playlist</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Ajouter/Éditer Contenu -->
+        <div id="content-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="content-modal-title">🎬 Ajouter un Contenu</h2>
+                    <button class="close-modal" onclick="closeContentModal()">&times;</button>
+                </div>
+                <div class="content-form">
+                    <input type="hidden" id="content-id">
+                    <div class="form-group">
+                        <label>Nom du contenu</label>
+                        <input type="text" id="content-name" placeholder="Ex: Page d'accueil">
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="content-type">
+                            <option value="url">Page Web (URL)</option>
+                            <option value="video">Vidéo (URL)</option>
+                            <option value="image">Image (URL)</option>
+                            <option value="youtube">YouTube</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>URL / Lien</label>
+                        <input type="text" id="content-url" placeholder="https://..." onblur="handleYoutubeUrl()">
+                        <div id="youtube-loading" style="display: none; color: #667eea; margin-top: 8px; font-size: 0.9em;">
+                            🔄 Récupération des métadonnées YouTube...
+                        </div>
+                        <div id="youtube-error" style="display: none; color: #dc3545; margin-top: 8px; font-size: 0.9em;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Durée d'affichage (obligatoire)</label>
+                        <input type="text" id="content-duration" value="00:00:10" placeholder="HH:MM:SS ou 1h 30m 45s" oninput="validateDuration()">
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            Formats acceptés: <code>01:30:45</code>, <code>1h 30m 45s</code>, <code>90</code> (secondes)
+                        </p>
+                        <div id="duration-error" style="display: none; color: #dc3545; margin-top: 8px; font-size: 0.9em; font-weight: bold;">
+                            ⚠️ La durée doit être supérieure à 0. Une durée infinie n'est pas permise pour les contenus.
+                        </div>
+                    </div>
+                    <button class="btn" onclick="saveContent()">💾 Sauvegarder</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Configuration Écran -->
+        <div id="screen-config-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>⚙️ Configuration de l'Écran</h2>
+                    <button class="close-modal" onclick="closeScreenConfigModal()">&times;</button>
+                </div>
+                <div class="content-form">
+                    <input type="hidden" id="config-screen-id">
+
+                    <h3 style="color: #667eea; margin-bottom: 15px;">Contenu par défaut</h3>
+                    <div class="form-group">
+                        <label>Contenu à afficher quand rien n'est planifié</label>
+                        <select id="config-default-content">
+                            <option value="">Aucun (écran vide)</option>
+                        </select>
+                    </div>
+
+                    <h3 style="color: #667eea; margin-bottom: 15px; margin-top: 30px;">Comportement entre les plages horaires</h3>
+                    <div class="form-group">
+                        <label>Que faire entre les plages horaires planifiées ?</label>
+                        <select id="config-idle-behavior">
+                            <option value="show_default">Afficher le contenu par défaut</option>
+                            <option value="continue_last">Continuer la dernière playlist</option>
+                        </select>
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            • <strong>Afficher le contenu par défaut</strong> : Retourne au contenu par défaut dès qu'une plage horaire se termine<br>
+                            • <strong>Continuer la dernière playlist</strong> : La playlist reste en boucle jusqu'à la prochaine plage horaire
+                        </p>
+                    </div>
+
+                    <button class="btn" onclick="saveScreenConfig()">💾 Sauvegarder la Configuration</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Debug Écran -->
+        <div id="debug-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🐛 Debug - <span id="debug-screen-name">Écran</span></h2>
+                    <button class="close-modal" onclick="closeDebugModal()">&times;</button>
+                </div>
+                <div class="content-form">
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9em;">
+                        <div style="margin-bottom: 15px;">
+                            <strong style="color: #667eea;">📊 État actuel</strong>
+                            <div style="margin-top: 8px; line-height: 1.8;">
+                                <div>🔌 Statut: <span id="debug-status" style="font-weight: bold;">--</span></div>
+                                <div>📺 Contenu actuel: <span id="debug-current-content">--</span></div>
+                                <div>📋 Playlist active: <span id="debug-playlist">--</span></div>
+                                <div>⏱️ Index playlist: <span id="debug-playlist-index">--</span></div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <strong style="color: #667eea;">⏰ Temporisation</strong>
+                            <div style="margin-top: 8px; line-height: 1.8;">
+                                <div>⏲️ Temps écoulé: <span id="debug-elapsed-time">--</span></div>
+                                <div>⏳ Durée totale: <span id="debug-total-duration">--</span></div>
+                                <div>📅 Dernière activité: <span id="debug-last-seen">--</span></div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <strong style="color: #667eea;">🌐 Réseau</strong>
+                            <div style="margin-top: 8px; line-height: 1.8;">
+                                <div>🆔 ID Écran: <span id="debug-screen-id">--</span></div>
+                                <div>📍 Emplacement: <span id="debug-location">--</span></div>
+                                <div>🔗 Socket ID: <span id="debug-socket-id">--</span></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <strong style="color: #667eea;">📅 Planning actif</strong>
+                            <div id="debug-schedule" style="margin-top: 8px; line-height: 1.8;">
+                                --
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 15px; text-align: center; color: #999; font-size: 0.85em;">
+                        ℹ️ Les données se rafraîchissent automatiquement toutes les 2 secondes
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Planificateur -->
+        <div id="scheduler-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>📅 Planifier l'Écran</h2>
+                    <button class="close-modal" onclick="closeSchedulerModal()">&times;</button>
+                </div>
+                <div class="content-form">
+                    <input type="hidden" id="scheduler-screen-id">
+                    
+                    <h3 style="color: #667eea; margin-bottom: 15px;">Planning actuel</h3>
+                    <div id="current-schedule-list" style="margin-bottom: 20px; max-height: 300px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px; background: #fafafa;"></div>
+                    
+                    <h3 style="color: #667eea; margin-bottom: 15px;">Ajouter une plage horaire</h3>
+                    <div class="form-group">
+                        <label>Playlist à afficher</label>
+                        <select id="scheduler-playlist-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Heure de début</label>
+                        <input type="time" id="scheduler-start">
+                    </div>
+                    <div class="form-group">
+                        <label>Heure de fin</label>
+                        <input type="time" id="scheduler-end">
+                    </div>
+                    <button class="btn" onclick="addScheduleEntry()">+ Ajouter au Planning</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reste du HTML identique... -->
+        <div class="main-content">
+            <div class="section" style="grid-column: 1 / -1;">
+                <div class="section-header">
+                    <h2>📺 Écrans Connectés</h2>
+                </div>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="total-screens">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="online-screens">0</div>
+                        <div class="stat-label">En ligne</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="content-count">0</div>
+                        <div class="stat-label">Contenus</div>
+                    </div>
+                </div>
+                <div class="screen-grid" id="screens-container"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>📋 Playlists</h2>
+                    <button class="btn btn-header" onclick="openCreatePlaylistModal()">+ Ajouter</button>
+                </div>
+                <div id="playlists-summary" class="content-list"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>📚 Bibliothèque</h2>
+                    <button class="btn btn-header" onclick="openAddContentModal()">+ Ajouter</button>
+                </div>
+                <div class="content-list" id="content-library"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let screens = {};
+        let contentLibrary = [];
+        let playlists = {};
+        let schedules = {};
+        let editingPlaylist = [];
+
+        // Fonctions de conversion de durée
+        function secondsToHMS(seconds) {
+            if (seconds === 0) return '∞ (infini)';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+
+            const parts = [];
+            if (h > 0) parts.push(`${h}h`);
+            if (m > 0) parts.push(`${m}m`);
+            if (s > 0 || parts.length === 0) parts.push(`${s}s`);
+
+            return parts.join(' ');
+        }
+
+        function hmsToSeconds(hms) {
+            if (!hms || hms === '' || hms === '0') return 0;
+
+            // Format acceptés: "1:30:45", "90:45", "45", "1h 30m 45s", "1h30m45s"
+            let totalSeconds = 0;
+
+            // Si c'est déjà un nombre simple
+            if (/^\d+$/.test(hms)) {
+                return parseInt(hms);
+            }
+
+            // Format avec h, m, s
+            const hMatch = hms.match(/(\d+)h/);
+            const mMatch = hms.match(/(\d+)m/);
+            const sMatch = hms.match(/(\d+)s/);
+
+            if (hMatch || mMatch || sMatch) {
+                if (hMatch) totalSeconds += parseInt(hMatch[1]) * 3600;
+                if (mMatch) totalSeconds += parseInt(mMatch[1]) * 60;
+                if (sMatch) totalSeconds += parseInt(sMatch[1]);
+                return totalSeconds;
+            }
+
+            // Format HH:MM:SS ou MM:SS ou SS
+            const parts = hms.split(':').map(p => parseInt(p) || 0);
+            if (parts.length === 3) {
+                return parts[0] * 3600 + parts[1] * 60 + parts[2];
+            } else if (parts.length === 2) {
+                return parts[0] * 60 + parts[1];
+            } else if (parts.length === 1) {
+                return parts[0];
+            }
+
+            return 0;
+        }
+
+        function getContentTypeIcon(type) {
+            const icons = {
+                'url': '<i class="fas fa-globe"></i>',
+                'video': '<i class="fas fa-video"></i>',
+                'image': '<i class="fas fa-image"></i>',
+                'youtube': '<i class="fab fa-youtube"></i>'
+            };
+            return icons[type] || '<i class="fas fa-file"></i>';
+        }
+
+        function getContentTypeText(type) {
+            const types = {
+                'url': 'Url',
+                'video': 'Vidéo',
+                'image': 'Image',
+                'youtube': 'YouTube'
+            };
+            return types[type] || type;
+        }
+
+        function truncateText(text, maxLength = 25) {
+            if (!text) return text;
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        }
+
+        function secondsToTimeInput(seconds) {
+            if (seconds === 0) return '00:00:00';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function timeInputToSeconds(timeStr) {
+            if (!timeStr || timeStr === '00:00:00') return 0;
+            const parts = timeStr.split(':').map(p => parseInt(p) || 0);
+            if (parts.length === 3) {
+                return parts[0] * 3600 + parts[1] * 60 + parts[2];
+            }
+            return 0;
+        }
+
+        socket.on('connect', () => {
+            console.log('Connecté au serveur');
+            socket.emit('get_state');
+        });
+
+        socket.on('state_update', (data) => {
+            screens = data.screens;
+            contentLibrary = data.content;
+            playlists = data.playlists || {};
+            schedules = data.schedules || {};
+            updateUI();
+        });
+
+        function updateUI() {
+            updateStats();
+            updateScreens();
+            updateContentLibrary();
+            updatePlaylistsSummary();
+        }
+
+        function updateStats() {
+            const total = Object.keys(screens).length;
+            const online = Object.values(screens).filter(s => s.status === 'online').length;
+            document.getElementById('total-screens').textContent = total;
+            document.getElementById('online-screens').textContent = online;
+            document.getElementById('content-count').textContent = contentLibrary.length;
+        }
+
+        function updateScreens() {
+            const container = document.getElementById('screens-container');
+            container.innerHTML = '';
+
+            for (const [id, screen] of Object.entries(screens)) {
+                const card = document.createElement('div');
+                card.className = `screen-card ${screen.status}`;
+                card.innerHTML = `
+                    <div style="position: relative;">
+                        <div class="screen-name" title="${screen.name}">${truncateText(screen.name, 20)}</div>
+                        <button onclick="openDebugModal('${id}')" style="position: absolute; top: -10px; right: -10px; background: #667eea; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" title="Debug">
+                            🐛
+                        </button>
+                    </div>
+                    <span class="screen-status status-${screen.status}">
+                        ${screen.status === 'online' ? '🟢 En ligne' : '🔴 Hors ligne'}
+                    </span>
+                    <div class="screen-info" title="${screen.location}">📍 ${truncateText(screen.location, 20)}</div>
+                    <div class="screen-info" title="${screen.current_playlist || 'Aucune en cours'}">📋 Playlist: ${truncateText(screen.current_playlist || 'Aucune en cours', 15)}</div>
+                    <div class="screen-info" title="${screen.current_content || 'Aucun en cours'}">🎬 Contenu: ${truncateText(screen.current_content || 'Aucun en cours', 15)}</div>
+                    ${screen.status === 'online' ? `
+                        <button class="btn" onclick="openScreenConfig('${id}')" style="margin-top: 5px;">⚙️ Configurer</button>
+                        <button class="btn" onclick="openScheduler('${id}')" style="margin-top: 5px;">📅 Planning</button>
+                    ` : ''}
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        function updateContentLibrary() {
+            const container = document.getElementById('content-library');
+            container.innerHTML = '';
+
+            if (contentLibrary.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">Aucun contenu</p>';
+                return;
+            }
+
+            contentLibrary.forEach(content => {
+                const item = document.createElement('div');
+                item.className = 'content-item';
+                const truncatedUrl = content.url.length > 25 ? content.url.substring(0, 25) + '...' : content.url;
+                item.innerHTML = `
+                    <div style="flex: 1;">
+                        <strong title="${content.name}">${content.name}</strong>
+                        <span class="content-type">${getContentTypeText(content.type)}</span>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            <span title="${content.url}">🔗 ${truncatedUrl}</span> | ⏱️ ${secondsToHMS(content.duration)}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-edit" onclick="editContent('${content.id}')">✏️ Éditer</button>
+                        <button class="btn btn-danger" onclick="deleteContent('${content.id}')" style="width: auto; padding: 8px 20px;">🗑️</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function updatePlaylistsSummary() {
+            const container = document.getElementById('playlists-summary');
+            container.innerHTML = '';
+
+            const playlistsArray = Object.values(playlists);
+            if (playlistsArray.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">Aucune playlist créée</p>';
+                return;
+            }
+
+            playlistsArray.forEach(playlist => {
+                const item = document.createElement('div');
+                item.className = 'content-item';
+
+                let totalDuration = playlist.items.reduce((sum, item) => sum + item.duration, 0);
+                const truncatedName = truncateText(playlist.name, 30);
+
+                item.innerHTML = `
+                    <div style="flex: 1;">
+                        <strong title="${playlist.name}">${truncatedName}</strong>
+                        <span class="content-type">${playlist.items.length} contenus</span>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            ⏱️ ${secondsToHMS(totalDuration)}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-edit" onclick="editPlaylist('${playlist.id}')">✏️ Éditer</button>
+                        <button class="btn btn-danger" onclick="deletePlaylist('${playlist.id}')" style="width: auto; padding: 8px 20px;">🗑️</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // GESTION DES PLAYLISTS
+
+        function openCreatePlaylistModal() {
+            document.getElementById('edit-playlist-title').textContent = '📋 Créer une Playlist';
+            document.getElementById('edit-playlist-id').value = '';
+            document.getElementById('edit-playlist-name').value = '';
+            editingPlaylist = [];
+            updateEditPlaylistPreview();
+            updateEditPlaylistContentSelect();
+            document.getElementById('edit-playlist-modal').classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+
+        function editPlaylist(playlistId) {
+            const playlist = playlists[playlistId];
+            document.getElementById('edit-playlist-title').textContent = '✏️ Éditer la Playlist';
+            document.getElementById('edit-playlist-id').value = playlistId;
+            document.getElementById('edit-playlist-name').value = playlist.name;
+            editingPlaylist = [...playlist.items];
+            updateEditPlaylistPreview();
+            updateEditPlaylistContentSelect();
+            document.getElementById('edit-playlist-modal').classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+
+        function closeEditPlaylistModal() {
+            document.getElementById('edit-playlist-modal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+        }
+
+        function updateEditPlaylistContentSelect() {
+            const select = document.getElementById('edit-playlist-content-select');
+            select.innerHTML = '<option value="">Choisir un contenu...</option>';
+            contentLibrary.forEach(content => {
+                const option = document.createElement('option');
+                option.value = content.id;
+                option.textContent = `${truncateText(content.name, 30)} (${getContentTypeText(content.type)})`;
+                select.appendChild(option);
+            });
+            // Réinitialiser l'affichage des infos
+            document.getElementById('selected-content-info').style.display = 'none';
+        }
+
+        function updateSelectedContentInfo() {
+            const contentId = document.getElementById('edit-playlist-content-select').value;
+            const infoDiv = document.getElementById('selected-content-info');
+            const durationSpan = document.getElementById('selected-content-duration');
+
+            if (!contentId) {
+                infoDiv.style.display = 'none';
+                return;
+            }
+
+            const content = contentLibrary.find(c => c.id === contentId);
+            if (!content) return;
+
+            durationSpan.textContent = secondsToHMS(content.duration);
+            infoDiv.style.display = 'block';
+        }
+
+        function addToEditPlaylist() {
+            const contentId = document.getElementById('edit-playlist-content-select').value;
+
+            if (!contentId) {
+                alert('Veuillez sélectionner un contenu');
+                return;
+            }
+
+            const content = contentLibrary.find(c => c.id === contentId);
+            if (!content) return;
+
+            // Utiliser la durée du contenu
+            const duration = content.duration;
+
+            if (duration <= 0) {
+                alert('Ce contenu a une durée infinie (0). Veuillez définir une durée dans la bibliothèque avant de l\'ajouter à une playlist.');
+                return;
+            }
+
+            editingPlaylist.push({
+                content: content,
+                duration: duration
+            });
+
+            updateEditPlaylistPreview();
+            document.getElementById('edit-playlist-content-select').value = '';
+            // Cacher l'info du contenu sélectionné
+            document.getElementById('selected-content-info').style.display = 'none';
+        }
+
+        function removeFromEditPlaylist(index) {
+            editingPlaylist.splice(index, 1);
+            updateEditPlaylistPreview();
+        }
+
+        function updateEditPlaylistPreview() {
+            const container = document.getElementById('edit-playlist-items');
+
+            if (editingPlaylist.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">Aucun contenu ajouté</p>';
+                return;
+            }
+
+            let totalDuration = 0;
+            container.innerHTML = '';
+
+            editingPlaylist.forEach((item, index) => {
+                totalDuration += item.duration;
+                const div = document.createElement('div');
+                div.className = 'playlist-item';
+                div.style.cssText = 'background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #667eea;';
+                div.innerHTML = `
+                    <div style="flex: 1;">
+                        <strong title="${item.content.name}">${index + 1}. ${item.content.name}</strong>
+                        <span class="content-type">${getContentTypeText(item.content.type)}</span>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            ⏱️ ${secondsToHMS(item.duration)}
+                        </div>
+                    </div>
+                    <button class="btn btn-danger" onclick="removeFromEditPlaylist(${index})" style="width: auto; padding: 8px 20px;">🗑️</button>
+                `;
+                container.appendChild(div);
+            });
+
+            const summary = document.createElement('div');
+            summary.style.cssText = 'margin-top: 15px; padding: 10px; background: #667eea; color: white; border-radius: 8px; text-align: center; font-weight: bold;';
+            summary.innerHTML = `📊 ${editingPlaylist.length} contenu(s) | Durée totale: ${secondsToHMS(totalDuration)}`;
+            container.appendChild(summary);
+        }
+
+        function saveEditedPlaylist() {
+            const playlistId = document.getElementById('edit-playlist-id').value;
+            const playlistName = document.getElementById('edit-playlist-name').value;
+
+            if (!playlistName) {
+                alert('Veuillez donner un nom à la playlist');
+                return;
+            }
+
+            if (editingPlaylist.length === 0) {
+                alert('Veuillez ajouter au moins un contenu');
+                return;
+            }
+
+            if (playlistId) {
+                // Modification
+                socket.emit('update_playlist', {
+                    id: playlistId,
+                    name: playlistName,
+                    items: editingPlaylist
+                });
+            } else {
+                // Création
+                socket.emit('create_playlist', {
+                    name: playlistName,
+                    items: editingPlaylist
+                });
+            }
+
+            closeEditPlaylistModal();
+        }
+
+        function deletePlaylist(playlistId) {
+            const playlist = playlists[playlistId];
+            if (confirm(`Supprimer la playlist "${playlist.name}" ?`)) {
+                socket.emit('delete_playlist', { playlist_id: playlistId });
+            }
+        }
+
+        // CONFIGURATION ÉCRAN
+
+        function openScreenConfig(screenId) {
+            const screen = screens[screenId];
+            document.getElementById('config-screen-id').value = screenId;
+
+            // Remplir la liste des contenus disponibles
+            const select = document.getElementById('config-default-content');
+            select.innerHTML = '<option value="">Aucun (écran vide)</option>';
+            contentLibrary.forEach(content => {
+                const option = document.createElement('option');
+                option.value = content.id;
+                option.textContent = `${truncateText(content.name, 30)} (${getContentTypeText(content.type)})`;
+                if (screen.default_content_id === content.id) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+
+            // Définir le comportement actuel
+            document.getElementById('config-idle-behavior').value = screen.idle_behavior || 'show_default';
+
+            document.getElementById('screen-config-modal').classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+
+        function closeScreenConfigModal() {
+            document.getElementById('screen-config-modal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+        }
+
+        function saveScreenConfig() {
+            const screenId = document.getElementById('config-screen-id').value;
+            const defaultContentId = document.getElementById('config-default-content').value || null;
+            const idleBehavior = document.getElementById('config-idle-behavior').value;
+
+            socket.emit('update_screen_config', {
+                screen_id: screenId,
+                default_content_id: defaultContentId,
+                idle_behavior: idleBehavior
+            });
+
+            closeScreenConfigModal();
+        }
+
+        // PLANIFICATEUR
+
+        function openScheduler(screenId) {
+            document.getElementById('scheduler-screen-id').value = screenId;
+            updateSchedulerPlaylistSelect();
+            updateCurrentSchedule(screenId);
+            document.getElementById('scheduler-modal').classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+
+        function closeSchedulerModal() {
+            document.getElementById('scheduler-modal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+        }
+
+        function updateSchedulerPlaylistSelect() {
+            const select = document.getElementById('scheduler-playlist-select');
+            select.innerHTML = '<option value="">Choisir une playlist...</option>';
+
+            Object.values(playlists).forEach(playlist => {
+                const option = document.createElement('option');
+                option.value = playlist.id;
+                option.textContent = `${truncateText(playlist.name, 30)} (${playlist.items.length} contenus)`;
+                select.appendChild(option);
+            });
+        }
+
+        function updateCurrentSchedule(screenId) {
+            const container = document.getElementById('current-schedule-list');
+            const screenSchedule = schedules[screenId] || [];
+
+            if (screenSchedule.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Aucune plage horaire définie</p>';
+                return;
+            }
+
+            // Tri automatique par heure de début (format 24h)
+            screenSchedule.sort((a, b) => {
+                return a.start.localeCompare(b.start);
+            });
+
+            container.innerHTML = '';
+            screenSchedule.forEach((entry, index) => {
+                const playlist = playlists[entry.playlist_id];
+                const playlistNameFull = playlist ? playlist.name : 'Playlist supprimée';
+                const playlistName = truncateText(playlistNameFull, 30);
+                const item = document.createElement('div');
+                item.style.cssText = 'background: white; padding: 8px 12px; margin-bottom: 6px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #667eea; font-size: 0.9em;';
+                item.innerHTML = `
+                    <div style="flex: 1;">
+                        <strong style="color: #333;">${entry.start} - ${entry.end}</strong>
+                        <span style="color: #666; margin-left: 10px;" title="${playlistNameFull}">• ${playlistName}</span>
+                    </div>
+                    <button class="btn btn-danger" onclick="removeScheduleEntry('${screenId}', ${index})" style="width: auto; padding: 4px 12px; font-size: 0.85em;">🗑️</button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function addScheduleEntry() {
+            const screenId = document.getElementById('scheduler-screen-id').value;
+            const playlistId = document.getElementById('scheduler-playlist-select').value;
+            const start = document.getElementById('scheduler-start').value;
+            const end = document.getElementById('scheduler-end').value;
+
+            if (!playlistId || !start || !end) {
+                alert('Veuillez remplir tous les champs');
+                return;
+            }
+
+            // Vérifier que l'heure de fin est après l'heure de début
+            if (start >= end) {
+                alert('❌ Erreur : L\'heure de fin doit être après l\'heure de début');
+                return;
+            }
+
+            if (!schedules[screenId]) {
+                schedules[screenId] = [];
+            }
+
+            // Vérifier s'il y a un chevauchement avec une plage horaire existante
+            for (const entry of schedules[screenId]) {
+                // Deux plages se chevauchent si :
+                // - La nouvelle commence avant la fin de l'existante ET
+                // - La nouvelle se termine après le début de l'existante
+                if (start < entry.end && end > entry.start) {
+                    const existingPlaylist = playlists[entry.playlist_id];
+                    const playlistName = existingPlaylist ? existingPlaylist.name : 'Playlist supprimée';
+                    alert(`❌ Conflit de plage horaire !\n\nLa plage ${start} - ${end} chevauche une plage existante :\n${entry.start} - ${entry.end} : ${playlistName}\n\nVeuillez choisir une plage horaire différente.`);
+                    return;
+                }
+            }
+
+            schedules[screenId].push({
+                playlist_id: playlistId,
+                start: start,
+                end: end
+            });
+
+            // Tri automatique par heure de début (format 24h)
+            schedules[screenId].sort((a, b) => {
+                return a.start.localeCompare(b.start);
+            });
+
+            socket.emit('update_schedule', {
+                screen_id: screenId,
+                schedule: schedules[screenId]
+            });
+
+            document.getElementById('scheduler-playlist-select').value = '';
+            document.getElementById('scheduler-start').value = '';
+            document.getElementById('scheduler-end').value = '';
+
+            updateCurrentSchedule(screenId);
+        }
+
+        function removeScheduleEntry(screenId, index) {
+            schedules[screenId].splice(index, 1);
+            socket.emit('update_schedule', {
+                screen_id: screenId,
+                schedule: schedules[screenId]
+            });
+            updateCurrentSchedule(screenId);
+        }
+
+        function openAddContentModal() {
+            document.getElementById('content-modal-title').textContent = '🎬 Ajouter un Contenu';
+            document.getElementById('content-id').value = '';
+            document.getElementById('content-name').value = '';
+            document.getElementById('content-type').value = 'url';
+            document.getElementById('content-url').value = '';
+            document.getElementById('content-duration').value = '00:00:10';
+            document.getElementById('duration-error').style.display = 'none';
+            document.getElementById('content-modal').classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+
+        function editContent(contentId) {
+            const content = contentLibrary.find(c => c.id === contentId);
+            if (!content) return;
+
+            document.getElementById('content-modal-title').textContent = '✏️ Éditer le Contenu';
+            document.getElementById('content-id').value = content.id;
+            document.getElementById('content-name').value = content.name;
+            document.getElementById('content-type').value = content.type;
+            document.getElementById('content-url').value = content.url;
+            // Si la durée est 0, mettre une valeur par défaut
+            const durationValue = content.duration > 0 ? secondsToTimeInput(content.duration) : '00:00:10';
+            document.getElementById('content-duration').value = durationValue;
+            document.getElementById('duration-error').style.display = 'none';
+            document.getElementById('content-modal').classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+
+        function closeContentModal() {
+            document.getElementById('content-modal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+            // Réinitialiser les messages d'erreur/loading
+            document.getElementById('youtube-loading').style.display = 'none';
+            document.getElementById('youtube-error').style.display = 'none';
+            document.getElementById('duration-error').style.display = 'none';
+        }
+
+        function validateDuration() {
+            const durationInput = document.getElementById('content-duration').value;
+            const errorDiv = document.getElementById('duration-error');
+            const duration = hmsToSeconds(durationInput);
+
+            if (duration <= 0) {
+                errorDiv.style.display = 'block';
+            } else {
+                errorDiv.style.display = 'none';
+            }
+        }
+
+        async function handleYoutubeUrl() {
+            const url = document.getElementById('content-url').value;
+            const type = document.getElementById('content-type').value;
+            const loadingDiv = document.getElementById('youtube-loading');
+            const errorDiv = document.getElementById('youtube-error');
+
+            // Cacher les messages
+            loadingDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            // Vérifier si c'est une URL YouTube et si le type est youtube
+            if (type !== 'youtube' || !url) {
+                return;
+            }
+
+            // Extraire l'ID de la vidéo
+            const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
+            if (!videoIdMatch) {
+                errorDiv.textContent = '⚠️ URL YouTube invalide';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const videoId = videoIdMatch[1];
+            loadingDiv.style.display = 'block';
+
+            try {
+                const response = await fetch(`/api/youtube-metadata/${videoId}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Mettre à jour les champs
+                    const nameField = document.getElementById('content-name');
+                    const durationField = document.getElementById('content-duration');
+
+                    // Ne remplacer le nom que s'il est vide
+                    if (!nameField.value || nameField.value === '') {
+                        nameField.value = data.title;
+                    }
+
+                    durationField.value = secondsToTimeInput(data.duration);
+                    loadingDiv.style.display = 'none';
+
+                    // Afficher un message de succès temporaire
+                    loadingDiv.textContent = '✅ Métadonnées récupérées avec succès';
+                    loadingDiv.style.color = '#28a745';
+                    loadingDiv.style.display = 'block';
+                    setTimeout(() => {
+                        loadingDiv.style.display = 'none';
+                        loadingDiv.textContent = '🔄 Récupération des métadonnées YouTube...';
+                        loadingDiv.style.color = '#667eea';
+                    }, 3000);
+                } else {
+                    errorDiv.textContent = `⚠️ ${data.error || 'Erreur lors de la récupération des métadonnées'}`;
+                    if (data.help) {
+                        errorDiv.textContent += ` - ${data.help}`;
+                    }
+                    errorDiv.style.display = 'block';
+                    loadingDiv.style.display = 'none';
+                }
+            } catch (error) {
+                errorDiv.textContent = '⚠️ Erreur de connexion au serveur';
+                errorDiv.style.display = 'block';
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        function saveContent() {
+            const contentId = document.getElementById('content-id').value;
+            const name = document.getElementById('content-name').value;
+            const type = document.getElementById('content-type').value;
+            const url = document.getElementById('content-url').value;
+            const durationInput = document.getElementById('content-duration').value;
+            const duration = hmsToSeconds(durationInput);
+
+            if (!name || !url) {
+                alert('Veuillez remplir tous les champs');
+                return;
+            }
+
+            if (duration <= 0) {
+                alert('❌ Erreur : La durée doit être supérieure à 0.\n\nVeuillez définir une durée valide (ex: 00:00:10).');
+                document.getElementById('duration-error').style.display = 'block';
+                return;
+            }
+
+            const contentData = {
+                id: contentId || 'content_' + Date.now(),
+                name: name,
+                type: type,
+                url: url,
+                duration: duration
+            };
+
+            if (contentId) {
+                socket.emit('update_content', contentData);
+            } else {
+                socket.emit('add_content', contentData);
+            }
+
+            closeContentModal();
+        }
+
+        function deleteContent(contentId) {
+            const content = contentLibrary.find(c => c.id === contentId);
+            if (confirm(`Supprimer "${content.name}" ?`)) {
+                socket.emit('delete_content', { content_id: contentId });
+            }
+        }
+
+        // DEBUG MODAL
+
+        let debugScreenId = null;
+        let debugInterval = null;
+
+        function openDebugModal(screenId) {
+            debugScreenId = screenId;
+            const screen = screens[screenId];
+
+            if (!screen) return;
+
+            const debugScreenNameElement = document.getElementById('debug-screen-name');
+            debugScreenNameElement.textContent = truncateText(screen.name, 25);
+            debugScreenNameElement.title = screen.name;
+            document.getElementById('debug-modal').classList.add('active');
+            document.body.classList.add('modal-open');
+
+            // Rafraîchir immédiatement
+            updateDebugInfo();
+
+            // Rafraîchir toutes les 2 secondes
+            debugInterval = setInterval(updateDebugInfo, 2000);
+        }
+
+        function closeDebugModal() {
+            document.getElementById('debug-modal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+
+            // Arrêter le rafraîchissement
+            if (debugInterval) {
+                clearInterval(debugInterval);
+                debugInterval = null;
+            }
+
+            debugScreenId = null;
+        }
+
+        function updateDebugInfo() {
+            if (!debugScreenId || !screens[debugScreenId]) return;
+
+            const screen = screens[debugScreenId];
+            const schedule = schedules[debugScreenId] || [];
+
+            // État actuel
+            document.getElementById('debug-status').textContent = screen.status === 'online' ? '🟢 En ligne' : '🔴 Hors ligne';
+            document.getElementById('debug-status').style.color = screen.status === 'online' ? '#28a745' : '#dc3545';
+
+            // Utiliser les infos de debug pour avoir les vraies valeurs
+            const debugInfo = screen.debug_info || {};
+            const currentContentName = debugInfo.current_content_name || screen.current_content || 'Aucun';
+            const debugCurrentContent = document.getElementById('debug-current-content');
+            debugCurrentContent.textContent = currentContentName === 'Aucun' ? currentContentName : truncateText(currentContentName, 30);
+            debugCurrentContent.title = currentContentName;
+
+            // Playlist active
+            const currentPlaylistName = debugInfo.current_playlist_name || screen.current_playlist || 'Aucune';
+            const debugPlaylist = document.getElementById('debug-playlist');
+            debugPlaylist.textContent = currentPlaylistName === 'Aucune' ? currentPlaylistName : truncateText(currentPlaylistName, 30);
+            debugPlaylist.title = currentPlaylistName;
+            document.getElementById('debug-playlist-index').textContent = debugInfo.playlist_index !== undefined
+                ? `${debugInfo.playlist_index + 1}/${debugInfo.playlist_length || '?'}`
+                : '--';
+
+            // Temporisation
+            if (debugInfo.elapsed_time !== undefined) {
+                document.getElementById('debug-elapsed-time').textContent = secondsToHMS(Math.floor(debugInfo.elapsed_time));
+            } else {
+                document.getElementById('debug-elapsed-time').textContent = '--';
+            }
+
+            if (debugInfo.current_duration !== undefined) {
+                document.getElementById('debug-total-duration').textContent = secondsToHMS(debugInfo.current_duration);
+            } else {
+                document.getElementById('debug-total-duration').textContent = '--';
+            }
+
+            document.getElementById('debug-last-seen').textContent = screen.last_seen || '--';
+
+            // Réseau
+            const debugScreenIdElement = document.getElementById('debug-screen-id');
+            debugScreenIdElement.textContent = truncateText(screen.id, 25);
+            debugScreenIdElement.title = screen.id;
+
+            const debugLocationElement = document.getElementById('debug-location');
+            debugLocationElement.textContent = truncateText(screen.location, 25);
+            debugLocationElement.title = screen.location;
+
+            const debugSocketIdElement = document.getElementById('debug-socket-id');
+            debugSocketIdElement.textContent = screen.sid ? screen.sid.substring(0, 12) + '...' : '--';
+            debugSocketIdElement.title = screen.sid || '--';
+
+            // Planning
+            const scheduleContainer = document.getElementById('debug-schedule');
+            if (schedule.length === 0) {
+                scheduleContainer.innerHTML = '<div style="color: #999;">Aucun planning défini</div>';
+            } else {
+                const now = new Date().toTimeString().slice(0, 5);
+                let html = '';
+                schedule.forEach(entry => {
+                    const playlist = playlists[entry.playlist_id];
+                    const isActive = entry.start <= now && now <= entry.end;
+                    const playlistNameFull = playlist ? playlist.name : 'Playlist supprimée';
+                    const playlistName = truncateText(playlistNameFull, 20);
+                    html += `<div style="padding: 5px; ${isActive ? 'background: #d4edda; border-left: 3px solid #28a745;' : ''}" title="${playlistNameFull}">
+                        ${entry.start} - ${entry.end}: ${playlistName}
+                        ${isActive ? ' <strong style="color: #28a745;">● ACTIF</strong>' : ''}
+                    </div>`;
+                });
+                scheduleContainer.innerHTML = html;
+            }
+        }
+
+        // Auto-update
+        socket.emit('get_state');
+    </script>
+</body>
+</html>

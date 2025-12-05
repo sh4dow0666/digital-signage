@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Digital Signage</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .wizard-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .step {
+            display: none;
+        }
+        .step.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .info-box.warning {
+            background: #fff3e0;
+            border-left-color: #ff9800;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, input[type="password"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .checkbox-item {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .checkbox-item:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        .checkbox-item.selected {
+            border-color: #667eea;
+            background: #e3f2fd;
+        }
+        .checkbox-item input[type="checkbox"] {
+            display: none;
+        }
+        .checkbox-item h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: transform 0.2s;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        .progress {
+            height: 5px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+        .help-text {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wizard-container">
+        <h1>Configuration Digital Signage</h1>
+        <p class="subtitle">Assistant de configuration initiale</p>
+
+        <div class="progress">
+            <div class="progress-bar" id="progress-bar" style="width: 25%"></div>
+        </div>
+
+        <!-- Étape 1: Bienvenue -->
+        <div class="step active" id="step1">
+            <h2>Bienvenue</h2>
+            <div class="info-box">
+                <strong>Première configuration</strong>
+                <p>Cet assistant va vous guider dans la configuration de votre dispositif Digital Signage.</p>
+            </div>
+            <div class="info-box warning">
+                <strong>Informations de connexion</strong>
+                <p><strong>SSID WiFi:</strong> {{ ssid }}</p>
+                <p><strong>Mot de passe:</strong> {{ password }}</p>
+                <p><strong>Adresse IP:</strong> {{ server_ip }}</p>
+            </div>
+            <div class="btn-container">
+                <div></div>
+                <button class="btn" onclick="nextStep()">Suivant</button>
+            </div>
+        </div>
+
+        <!-- Étape 2: Choix du rôle -->
+        <div class="step" id="step2">
+            <h2>Rôle du dispositif</h2>
+            <p class="help-text">Sélectionnez le ou les rôles pour ce dispositif :</p>
+
+            <div class="checkbox-group">
+                <div class="checkbox-item" onclick="toggleRole('controller')">
+                    <input type="checkbox" id="role_controller" value="controller">
+                    <h3>Contrôleur</h3>
+                    <p>Interface de gestion des écrans</p>
+                </div>
+                <div class="checkbox-item" onclick="toggleRole('player')">
+                    <input type="checkbox" id="role_player" value="player">
+                    <h3>Player</h3>
+                    <p>Affichage du contenu</p>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <p><strong>Note:</strong> Vous pouvez sélectionner les deux rôles si ce dispositif doit être autonome.</p>
+            </div>
+
+            <div class="btn-container">
+                <button class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                <button class="btn" onclick="nextStep()">Suivant</button>
+            </div>
+        </div>
+
+        <!-- Étape 3: Configuration Player -->
+        <div class="step" id="step3">
+            <h2>Configuration Player</h2>
+
+            <div class="form-group">
+                <label>ID unique de l'écran *</label>
+                <input type="text" id="screen_id" placeholder="ex: ecran1, salon, reception..." required>
+                <p class="help-text">Identifiant unique pour cet écran</p>
+            </div>
+
+            <div class="form-group">
+                <label>Nom de l'écran *</label>
+                <input type="text" id="screen_name" placeholder="ex: Écran Principal, Salon..." required>
+                <p class="help-text">Nom d'affichage de l'écran</p>
+            </div>
+
+            <div class="form-group">
+                <label>Emplacement</label>
+                <input type="text" id="screen_location" placeholder="ex: RDC, Étage 1, Accueil...">
+                <p class="help-text">Lieu physique de l'écran</p>
+            </div>
+
+            <div class="form-group">
+                <label>Adresse du contrôleur *</label>
+                <input type="text" id="controller_url" value="http://localhost:5000" required>
+                <p class="help-text">URL du serveur contrôleur (localhost si ce dispositif est aussi contrôleur)</p>
+            </div>
+
+            <div class="btn-container">
+                <button class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                <button class="btn" onclick="nextStep()">Suivant</button>
+            </div>
+        </div>
+
+        <!-- Étape 4: Récapitulatif -->
+        <div class="step" id="step4">
+            <h2>Récapitulatif</h2>
+
+            <div class="info-box">
+                <strong>Configuration à enregistrer :</strong>
+                <div id="summary" style="margin-top: 15px;"></div>
+            </div>
+
+            <div class="btn-container">
+                <button class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                <button class="btn" onclick="saveConfiguration()">Terminer</button>
+            </div>
+        </div>
+
+        <!-- Étape 5: Fin -->
+        <div class="step" id="step5">
+            <h2>Configuration terminée !</h2>
+
+            <div class="info-box">
+                <strong>Le dispositif va redémarrer...</strong>
+                <p style="margin-top: 10px;">La configuration a été enregistrée avec succès. Le système va redémarrer pour appliquer les changements.</p>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <div style="font-size: 4em;">✅</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 5;
+
+        function updateProgress() {
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+        }
+
+        function nextStep() {
+            // Validation
+            if (currentStep === 2) {
+                const hasController = document.getElementById('role_controller').checked;
+                const hasPlayer = document.getElementById('role_player').checked;
+
+                if (!hasController && !hasPlayer) {
+                    alert('Veuillez sélectionner au moins un rôle.');
+                    return;
+                }
+
+                // Si player n'est pas sélectionné, sauter l'étape 3
+                if (!hasPlayer) {
+                    currentStep++;
+                }
+            }
+
+            if (currentStep === 3) {
+                const screenId = document.getElementById('screen_id').value;
+                const screenName = document.getElementById('screen_name').value;
+
+                if (!screenId || !screenName) {
+                    alert('Veuillez remplir les champs obligatoires.');
+                    return;
+                }
+
+                // Remplir le récapitulatif
+                fillSummary();
+            }
+
+            document.getElementById('step' + currentStep).classList.remove('active');
+            currentStep++;
+            document.getElementById('step' + currentStep).classList.add('active');
+            updateProgress();
+        }
+
+        function prevStep() {
+            document.getElementById('step' + currentStep).classList.remove('active');
+            currentStep--;
+
+            // Si on revient et que player n'est pas sélectionné, sauter l'étape 3
+            const hasPlayer = document.getElementById('role_player').checked;
+            if (currentStep === 3 && !hasPlayer) {
+                currentStep--;
+            }
+
+            document.getElementById('step' + currentStep).classList.add('active');
+            updateProgress();
+        }
+
+        function toggleRole(role) {
+            const checkbox = document.getElementById('role_' + role);
+            const item = checkbox.parentElement;
+
+            checkbox.checked = !checkbox.checked;
+
+            if (checkbox.checked) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+
+            // Auto-remplir l'URL du contrôleur
+            if (role === 'controller' && checkbox.checked) {
+                document.getElementById('controller_url').value = 'http://localhost:5000';
+            }
+        }
+
+        function fillSummary() {
+            const hasController = document.getElementById('role_controller').checked;
+            const hasPlayer = document.getElementById('role_player').checked;
+            const screenId = document.getElementById('screen_id').value;
+            const screenName = document.getElementById('screen_name').value;
+            const screenLocation = document.getElementById('screen_location').value;
+            const controllerUrl = document.getElementById('controller_url').value;
+
+            let summary = '<ul style="list-style: none; padding: 0;">';
+            summary += '<li><strong>Rôles:</strong> ';
+
+            const roles = [];
+            if (hasController) roles.push('Contrôleur');
+            if (hasPlayer) roles.push('Player');
+            summary += roles.join(' + ') + '</li>';
+
+            if (hasPlayer) {
+                summary += '<li><strong>ID écran:</strong> ' + screenId + '</li>';
+                summary += '<li><strong>Nom:</strong> ' + screenName + '</li>';
+                if (screenLocation) {
+                    summary += '<li><strong>Emplacement:</strong> ' + screenLocation + '</li>';
+                }
+                summary += '<li><strong>Contrôleur:</strong> ' + controllerUrl + '</li>';
+            }
+
+            summary += '</ul>';
+            document.getElementById('summary').innerHTML = summary;
+        }
+
+        async function saveConfiguration() {
+            const config = {
+                role_controller: document.getElementById('role_controller').checked,
+                role_player: document.getElementById('role_player').checked,
+                screen_id: document.getElementById('screen_id').value,
+                screen_name: document.getElementById('screen_name').value,
+                screen_location: document.getElementById('screen_location').value,
+                controller_url: document.getElementById('controller_url').value
+            };
+
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('step' + currentStep).classList.remove('active');
+                    currentStep = 5;
+                    document.getElementById('step' + currentStep).classList.add('active');
+                    updateProgress();
+
+                    // Attendre 3 secondes avant de fermer
+                    setTimeout(() => {
+                        window.close();
+                    }, 3000);
+                } else {
+                    alert('Erreur: ' + data.error);
+                }
+            } catch (error) {
+                alert('Erreur de connexion: ' + error);
+            }
+        }
+
+        // Initialisation
+        updateProgress();
+    </script>
+</body>
+</html>

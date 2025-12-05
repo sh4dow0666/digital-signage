@@ -1,0 +1,44 @@
+# Permissions pour le système Digital Signage
+# Permet à l'utilisateur __INSTALL_USER__ d'exécuter certaines commandes sans mot de passe
+
+# Commandes pour le script startup.sh
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: __INSTALL_DIR__/raspberry/scripts/setup-ap.sh
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /sbin/reboot
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /sbin/shutdown
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/sbin/reboot
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/sbin/shutdown
+
+# Commandes pour la gestion du réseau et hostapd (dans setup-ap.sh)
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/systemctl start hostapd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop hostapd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart hostapd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/systemctl unmask hostapd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/systemctl start dnsmasq
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop dnsmasq
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dnsmasq
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/systemctl start dhcpcd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop dhcpcd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dhcpcd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl start hostapd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl stop hostapd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl restart hostapd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl unmask hostapd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl start dnsmasq
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl stop dnsmasq
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl restart dnsmasq
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl start dhcpcd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl stop dhcpcd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl restart dhcpcd
+
+# Commandes pour la configuration du réseau
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/sbin/ip addr flush dev wlan0
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/sbin/ip addr add 192.168.4.1/24 dev wlan0
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/sbin/ip link set wlan0 up
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /sbin/ip addr flush dev wlan0
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /sbin/ip addr add 192.168.4.1/24 dev wlan0
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /sbin/ip link set wlan0 up
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/tee /etc/dnsmasq.conf
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/tee /etc/hostapd/hostapd.conf
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/sed -i * /etc/default/hostapd
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/tee /proc/sys/net/ipv4/ip_forward
+__INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/sed -i * /etc/default/hostapd

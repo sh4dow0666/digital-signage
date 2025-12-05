@@ -1,0 +1,20 @@
+[Unit]
+Description=Digital Signage Display System
+After=network-online.target graphical.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__INSTALL_USER__
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=__USER_HOME__/.Xauthority
+WorkingDirectory=__INSTALL_DIR__
+ExecStartPre=/bin/sleep 5
+ExecStart=__INSTALL_DIR__/raspberry/scripts/startup.sh
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical.target

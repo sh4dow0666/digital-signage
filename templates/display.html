@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Écran d'affichage</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link href="{{ url_for('static', filename='css/player.css') }}" rel="stylesheet" />
+</head>
+<body>
+    <div id="status-indicator" onclick="toggleDebugPanel()" title="Cliquez pour voir les infos de debug"></div>
+
+    <div id="debug-panel">
+        <div style="font-weight: bold; margin-bottom: 10px; color: #667eea;">🐛 Informations de debug</div>
+        <div class="debug-line"><strong>État:</strong> <span id="debug-status-text">Déconnecté</span></div>
+        <div class="debug-line"><strong>Écran:</strong> <span id="debug-screen-id">--</span></div>
+        <div class="debug-line"><strong>Playlist:</strong> <span id="debug-playlist-name">Aucune</span></div>
+        <div class="debug-line"><strong>Contenu:</strong> <span id="debug-content-name">Aucun</span></div>
+        <div class="debug-line"><strong>Index:</strong> <span id="debug-index">--</span></div>
+        <div class="debug-line"><strong>Temps écoulé:</strong> <span id="debug-elapsed">--</span></div>
+        <div class="debug-line"><strong>Durée totale:</strong> <span id="debug-duration">--</span></div>
+        <div class="debug-line"><strong>Dernière vérif:</strong> <span id="debug-last-check">--</span></div>
+    </div>
+
+    <div id="content-container">
+        <div class="waiting">En attente de contenu...</div>
+    </div>
+
+    <script>
+        const socket = io();
+        const screenId = new URLSearchParams(window.location.search).get('id');
+        const screenName = new URLSearchParams(window.location.search).get('name') || 'Écran ' + screenId;
+        let playlistInterval = null;
+        let currentPlaylistIndex = 0;
+        let currentPlaylist = [];
+        let schedule = [];
+        let screensPlaylists = {}; // CORRECTION: Variable initialisée
+        let contentLibrary = []; // Bibliothèque de contenus
+        let activeScheduledPlaylistId = null; // Suivre quelle playlist planifiée est active
+        let defaultContentId = null; // Contenu par défaut
+        let idleBehavior = 'show_default'; // Comportement entre plages horaires
+        let currentContentStartTime = null; // Temps de début du contenu actuel
+        let currentContentDuration = 0; // Durée du contenu actuel
+        let currentContentName = null; // Nom du contenu actuel (pour affichage)
+        let currentPlaylistName = null; // Nom de la playlist active
+
+        // Fonction pour basculer le panneau de debug
+        function toggleDebugPanel() {
+            const panel = document.getElementById('debug-panel');
+            panel.classList.toggle('open');
+        }
+
+        // Fonction pour formater les secondes en HH:MM:SS
+        function formatTime(seconds) {
+            if (!seconds || seconds === 0) return '00:00:00';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        // Fonction pour mettre à jour les infos de debug dans le panneau
+        function updateDebugPanel() {
+            screenIdText = screenId || '--';
+            const screenIdElement = document.getElementById('debug-screen-id');
+            // tronque l'ID de l'écran s'il est trop long
+            if (screenIdText.length > 20) {
+                screenIdElement.title = screenIdText; // Afficher le nom complet au survol
+                screenIdText = screenIdText.slice(0, 17) + '...';
+            } else {
+                screenIdElement.removeAttribute('title');
+            }
+            screenIdElement.textContent = screenIdText;
+
+            playlist_text = currentPlaylistName || 'Aucune';
+            const playlistElement = document.getElementById('debug-playlist-name');
+            if (playlist_text.length > 20) {
+                playlistElement.title = playlist_text; // Afficher le nom complet au survol
+                playlist_text = playlist_text.slice(0, 17) + '...';
+            } else {
+                playlistElement.removeAttribute('title');
+            }
+            playlistElement.textContent = playlist_text;
+
+            // Afficher le nom du contenu actuel
+            let displayContentName = 'Aucun';
+            if (currentPlaylist.length > 0 && currentPlaylist[currentPlaylistIndex]) {
+                displayContentName = currentPlaylist[currentPlaylistIndex].content.name;
+            } else if (currentContentName) {
+                displayContentName = currentContentName;
+            }
+            const contentElement = document.getElementById('debug-content-name');
+            // tronque le nom du contenu si trop long
+            if (displayContentName.length > 20) {
+                contentElement.title = displayContentName; // Afficher le nom complet au survol
+                displayContentName = displayContentName.slice(0, 17) + '...';
+            } else {
+                contentElement.removeAttribute('title');
+            }
+            contentElement.textContent = displayContentName;
+
+            if (currentPlaylist.length > 0) {
+                document.getElementById('debug-index').textContent = `${currentPlaylistIndex + 1}/${currentPlaylist.length}`;
+            } else {
+                document.getElementById('debug-index').textContent = '--';
+            }
+
+            if (currentContentStartTime) {
+                const elapsed = Math.floor((Date.now() - currentContentStartTime) / 1000);
+                document.getElementById('debug-elapsed').textContent = formatTime(elapsed);
+            } else {
+                document.getElementById('debug-elapsed').textContent = '00:00:00';
+            }
+
+            document.getElementById('debug-duration').textContent = currentContentDuration > 0 ? formatTime(currentContentDuration) : '∞ (infini)';
+            document.getElementById('debug-last-check').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Mettre à jour le panneau de debug toutes les secondes
+        setInterval(updateDebugPanel, 1000);
+
+        socket.on('connect', () => {
+            const indicator = document.getElementById('status-indicator');
+            indicator.className = 'online';
+            document.getElementById('debug-status-text').textContent = '🟢 Connecté';
+            document.getElementById('debug-status-text').style.color = '#28a745';
+
+            socket.emit('register_screen', {
+                screen_id: screenId,
+                name: screenName,
+                location: new URLSearchParams(window.location.search).get('location') || 'Non défini'
+            });
+            console.log('✅ Connecté au serveur avec ID:', screenId);
+        });
+
+        socket.on('disconnect', () => {
+            const indicator = document.getElementById('status-indicator');
+            indicator.className = 'offline';
+            document.getElementById('debug-status-text').textContent = '🔴 Déconnecté';
+            document.getElementById('debug-status-text').style.color = '#dc3545';
+            console.log('❌ Déconnecté du serveur');
+        });
+
+        // CORRECTION: Réception de la liste complète des playlists
+        socket.on('send_full_playlist_list', (data) => {
+            if (data.screen_id === screenId || !data.screen_id) {
+                screensPlaylists = data.playlists;
+                console.log('📋 Playlists reçues:', Object.keys(screensPlaylists).length);
+            }
+        });
+
+        // Réception de la bibliothèque de contenus
+        socket.on('send_content_library', (data) => {
+            if (data.screen_id === screenId || !data.screen_id) {
+                contentLibrary = data.content;
+                console.log('📚 Bibliothèque de contenus reçue:', contentLibrary.length);
+                // Vérifier si un contenu par défaut doit être affiché maintenant que la bibliothèque est chargée
+                checkSchedule();
+            }
+        });
+
+        // CORRECTION: Réception du planning
+        socket.on('update_schedule', (data) => {
+            if (data.screen_id === screenId) {
+                schedule = data.schedule || [];
+                console.log('📅 Planning mis à jour:', schedule);
+                // Réinitialiser la playlist active pour forcer la vérification
+                activeScheduledPlaylistId = null;
+                // Vérifier immédiatement si une playlist doit être lancée
+                checkSchedule();
+            }
+        });
+
+        // Réception de la configuration de l'écran
+        socket.on('config_updated', (data) => {
+            if (data.screen_id === screenId) {
+                defaultContentId = data.default_content_id;
+                idleBehavior = data.idle_behavior || 'show_default';
+                console.log('⚙️ Configuration mise à jour:', { defaultContentId, idleBehavior });
+
+                // Si aucune playlist planifiée n'est active, forcer l'affichage du contenu par défaut
+                if (activeScheduledPlaylistId === null) {
+                    console.log('   → Aucune playlist planifiée active, application immédiate de la config');
+                    // Arrêter toute playlist en cours (manuelle ou ancienne)
+                    stopPlaylist();
+                    // Afficher le contenu par défaut
+                    showDefaultContent();
+                } else {
+                    // Si une playlist planifiée est active, juste vérifier l'état
+                    console.log('   → Playlist planifiée active, vérification du planning');
+                    checkSchedule();
+                }
+            }
+        });
+
+        // Vérification du planning toutes les 10 secondes pour plus de précision
+        setInterval(checkSchedule, 10000);
+
+        function checkSchedule() {
+            if (!schedule || schedule.length === 0) {
+                console.log('⏰ Pas de planning défini');
+                // Si pas de planning, réinitialiser la playlist planifiée active
+                if (activeScheduledPlaylistId !== null) {
+                    activeScheduledPlaylistId = null;
+                }
+                // Afficher le contenu par défaut s'il n'y a pas de playlist en cours
+                if (currentPlaylist.length === 0) {
+                    showDefaultContent();
+                }
+                return;
+            }
+
+            const now = new Date();
+            const currentTime = now.toTimeString().slice(0, 5); // HH:MM
+            console.log('⏰ Vérification du planning à', currentTime);
+
+            // Trouver la playlist qui doit être active maintenant
+            let targetPlaylistId = null;
+
+            for (const entry of schedule) {
+                console.log(`   Plage horaire: ${entry.start} - ${entry.end}`);
+
+                // Vérification de la plage horaire
+                if (entry.start <= currentTime && currentTime <= entry.end) {
+                    targetPlaylistId = entry.playlist_id;
+                    console.log(`   ✅ Dans la plage! Playlist ID:`, targetPlaylistId);
+                    break; // On prend la première correspondance
+                }
+            }
+
+            // Si on a trouvé une playlist planifiée et qu'elle est différente de celle active
+            if (targetPlaylistId && targetPlaylistId !== activeScheduledPlaylistId) {
+                if (screensPlaylists && screensPlaylists[targetPlaylistId]) {
+                    const playlist = screensPlaylists[targetPlaylistId];
+                    console.log('   📋 FORÇAGE du lancement de la playlist:', playlist.name);
+
+                    // Arrêter la playlist actuelle (force l'arrêt même si une autre est en cours)
+                    stopPlaylist();
+
+                    // Mémoriser quelle playlist planifiée est maintenant active
+                    activeScheduledPlaylistId = targetPlaylistId;
+                    currentPlaylistName = playlist.name; // Stocker le nom de la playlist
+
+                    // Démarrer la nouvelle playlist
+                    currentPlaylist = playlist.items;
+                    currentPlaylistIndex = 0;
+                    playNextInPlaylist();
+                } else {
+                    console.log('   ⚠️ Playlist introuvable:', targetPlaylistId);
+                }
+            } else if (!targetPlaylistId && activeScheduledPlaylistId !== null) {
+                // Plus aucune playlist planifiée n'est active
+                console.log('   ⏰ Fin de la plage horaire planifiée');
+                activeScheduledPlaylistId = null;
+
+                // Gérer le comportement entre les plages horaires
+                if (idleBehavior === 'show_default') {
+                    console.log('   📺 Affichage du contenu par défaut');
+                    showDefaultContent();
+                } else {
+                    console.log('   🔁 Continuation de la dernière playlist');
+                    // Ne rien faire, la playlist continue
+                }
+            } else if (targetPlaylistId === activeScheduledPlaylistId) {
+                console.log('   ✓ Playlist planifiée déjà active:', targetPlaylistId);
+            } else if (!targetPlaylistId) {
+                console.log('   ⏰ Aucune playlist programmée pour le moment');
+                // Si aucune playlist planifiée et aucune n'est active, afficher le contenu par défaut
+                if (activeScheduledPlaylistId === null && currentPlaylist.length === 0) {
+                    showDefaultContent();
+                }
+            }
+        }
+
+        function showDefaultContent() {
+            console.log('🔄 showDefaultContent() appelé');
+            console.log('   - defaultContentId:', defaultContentId);
+            console.log('   - contentLibrary.length:', contentLibrary.length);
+            console.log('   - currentPlaylist.length:', currentPlaylist.length);
+
+            if (!defaultContentId) {
+                console.log('   ℹ️ Pas de contenu par défaut défini');
+                stopPlaylist();
+                document.getElementById('content-container').innerHTML =
+                    '<div class="waiting">En attente de contenu...</div>';
+                return;
+            }
+
+            // Trouver le contenu par défaut dans la bibliothèque
+            const defaultContent = contentLibrary.find(c => c.id === defaultContentId);
+
+            if (!defaultContent) {
+                console.log('   ⚠️ Contenu par défaut introuvable dans la bibliothèque:', defaultContentId);
+                console.log('   Contenus disponibles:', contentLibrary.map(c => c.id));
+                return;
+            }
+
+            console.log('   ✅ Contenu par défaut trouvé:', defaultContent.name);
+            console.log('   📺 Affichage du contenu par défaut...');
+            stopPlaylist();
+            displayContent(defaultContent);
+        }
+
+        function displayContent(content) {
+            console.log('🎬 displayContent() appelé pour:', content.name, '(type:', content.type + ')');
+            const container = document.getElementById('content-container');
+            container.innerHTML = '';
+
+            // Mettre à jour les infos de debug
+            currentContentStartTime = Date.now();
+            currentContentDuration = content.duration || 0;
+            currentContentName = content.name;
+
+            if (content.type === 'url') {
+                console.log('   → Affichage URL:', content.url);
+                container.innerHTML = `<iframe src="${content.url}" allowfullscreen></iframe>`;
+            } else if (content.type === 'video') {
+                container.innerHTML = `
+                    <video src="${content.url}" autoplay loop controls>
+                        Votre navigateur ne supporte pas la vidéo.
+                    </video>
+                `;
+            } else if (content.type === 'image') {
+                container.innerHTML = `<img src="${content.url}" alt="Image">`;
+            } else if (content.type === 'youtube') {
+                const videoId = content.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1];
+                if (videoId) {
+                    container.innerHTML = `
+                        <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${videoId}"
+                                allow="autoplay; encrypted-media"
+                                allowfullscreen></iframe>
+                    `;
+                }
+            }
+        }
+
+        socket.on('show_content', (data) => {
+            console.log('📺 Affichage du contenu manuel:', data.name);
+            // Réinitialiser la playlist planifiée active (affichage manuel)
+            activeScheduledPlaylistId = null;
+
+            // Mettre à jour les infos de debug
+            currentContentStartTime = Date.now();
+            currentContentDuration = data.duration || 0;
+            currentContentName = data.name;
+
+            const container = document.getElementById('content-container');
+            container.innerHTML = '';
+
+            if (data.type === 'url') {
+                container.innerHTML = `<iframe src="${data.url}" allowfullscreen></iframe>`;
+            } else if (data.type === 'video') {
+                container.innerHTML = `
+                    <video src="${data.url}" autoplay loop controls>
+                        Votre navigateur ne supporte pas la vidéo.
+                    </video>
+                `;
+            } else if (data.type === 'image') {
+                container.innerHTML = `<img src="${data.url}" alt="Image">`;
+            } else if (data.type === 'youtube') {
+                const videoId = data.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1];
+                if (videoId) {
+                    container.innerHTML = `
+                        <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${videoId}"
+                                allow="autoplay; encrypted-media"
+                                allowfullscreen></iframe>
+                    `;
+                }
+            }
+
+            if (data.duration > 0) {
+                setTimeout(() => {
+                    container.innerHTML = '<div class="waiting">Contenu terminé</div>';
+                }, data.duration * 1000);
+            }
+        });
+
+        socket.on('clear_content', () => {
+            console.log('🧹 Effacement de l\'écran');
+            document.getElementById('content-container').innerHTML =
+                '<div class="waiting">En attente de contenu...</div>';
+            stopPlaylist();
+            // Réinitialiser la playlist planifiée active
+            activeScheduledPlaylistId = null;
+            currentContentName = null;
+            currentContentStartTime = null;
+        });
+
+        socket.on('start_playlist', (data) => {
+            console.log('📋 Démarrage de la playlist manuelle:', data.name);
+            stopPlaylist();
+            // Réinitialiser la playlist planifiée active (c'est une playlist manuelle)
+            activeScheduledPlaylistId = null;
+            currentPlaylist = data.items;
+            currentPlaylistIndex = 0;
+            currentPlaylistName = data.name; // Stocker le nom de la playlist
+            playNextInPlaylist();
+        });
+
+        function stopPlaylist() {
+            if (playlistInterval) {
+                clearTimeout(playlistInterval);
+                playlistInterval = null;
+                console.log('⏹️ Playlist arrêtée');
+            }
+            currentPlaylist = [];
+            currentPlaylistIndex = 0;
+            currentContentName = null;
+            currentPlaylistName = null;
+        }
+
+        function playNextInPlaylist() {
+            if (currentPlaylist.length === 0) {
+                console.log('⚠️ Playlist vide');
+                return;
+            }
+
+            const item = currentPlaylist[currentPlaylistIndex];
+            const content = item.content;
+            const duration = item.duration;
+
+            console.log(`▶️ Lecture ${currentPlaylistIndex + 1}/${currentPlaylist.length}: ${content.name} (${duration}s)`);
+
+            // Mettre à jour les infos de debug
+            currentContentStartTime = Date.now();
+            currentContentDuration = duration;
+
+            // Afficher le contenu
+            const container = document.getElementById('content-container');
+            container.innerHTML = '';
+
+            if (content.type === 'url') {
+                container.innerHTML = `<iframe src="${content.url}" allowfullscreen></iframe>`;
+            } else if (content.type === 'video') {
+                container.innerHTML = `
+                    <video src="${content.url}" autoplay loop controls>
+                        Votre navigateur ne supporte pas la vidéo.
+                    </video>
+                `;
+            } else if (content.type === 'image') {
+                container.innerHTML = `<img src="${content.url}" alt="Image">`;
+            } else if (content.type === 'youtube') {
+                const videoId = content.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1];
+                if (videoId) {
+                    container.innerHTML = `
+                        <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${videoId}"
+                                allow="autoplay; encrypted-media"
+                                allowfullscreen></iframe>
+                    `;
+                }
+            }
+
+            // Programmer le prochain contenu
+            playlistInterval = setTimeout(() => {
+                currentPlaylistIndex = (currentPlaylistIndex + 1) % currentPlaylist.length;
+                playNextInPlaylist();
+            }, duration * 1000);
+        }
+
+        // Envoyer les informations de debug toutes les 5 secondes
+        setInterval(() => {
+            const elapsedTime = currentContentStartTime
+                ? (Date.now() - currentContentStartTime) / 1000
+                : 0;
+
+            // Déterminer le nom du contenu actuel (sans "Playlist:")
+            let currentItemName = null;
+            if (currentPlaylist.length > 0 && currentPlaylist[currentPlaylistIndex]) {
+                const currentItem = currentPlaylist[currentPlaylistIndex];
+                currentItemName = currentItem.content.name;
+            } else if (currentContentName) {
+                currentItemName = currentContentName;
+            }
+
+            const debugInfo = {
+                screen_id: screenId,
+                current_playlist_name: currentPlaylistName, // Nom de la playlist
+                current_content_name: currentItemName, // Nom du contenu actuel
+                playlist_index: currentPlaylist.length > 0 ? currentPlaylistIndex : null,
+                playlist_length: currentPlaylist.length,
+                elapsed_time: elapsedTime,
+                current_duration: currentContentDuration
+            };
+
+            socket.emit('update_debug_info', debugInfo);
+        }, 5000);
+
+        // Vérifier le planning au chargement de la page
+        setTimeout(() => {
+            checkSchedule();
+        }, 2000);
+    </script>
+</body>
+</html>

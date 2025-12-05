@@ -1,0 +1,16 @@
+{
+  "cuisine": {
+    "id": "cuisine",
+    "name": "Écran Cuisine",
+    "location": "RDC",
+    "default_content_id": "content_1764859513887",
+    "idle_behavior": "show_default"
+  },
+  "bureau": {
+    "id": "bureau",
+    "name": "Écran Bureau",
+    "location": "RDC",
+    "default_content_id": null,
+    "idle_behavior": "show_default"
+  }
+}
