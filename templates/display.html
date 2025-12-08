@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Écran d'affichage</title>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
     <link href="{{ url_for('static', filename='css/player.css') }}" rel="stylesheet" />
 </head>
 <body>
@@ -140,6 +140,12 @@
             console.log('❌ Déconnecté du serveur');
         });
 
+        socket.on('state_update', (data) => {
+            //console.log("📢 Mise à jour de l'état reçue:", data);
+            screensPlaylists = data.playlists;
+            contentLibrary = data.content;
+        });
+
         // CORRECTION: Réception de la liste complète des playlists
         socket.on('send_full_playlist_list', (data) => {
             if (data.screen_id === screenId || !data.screen_id) {
@@ -164,7 +170,7 @@
                 schedule = data.schedule || [];
                 console.log('📅 Planning mis à jour:', schedule);
                 // Réinitialiser la playlist active pour forcer la vérification
-                activeScheduledPlaylistId = null;
+                //activeScheduledPlaylistId = null;
                 // Vérifier immédiatement si une playlist doit être lancée
                 checkSchedule();
             }
@@ -203,7 +209,7 @@
                     activeScheduledPlaylistId = null;
                 }
                 // Afficher le contenu par défaut s'il n'y a pas de playlist en cours
-                if (currentPlaylist.length === 0) {
+                if (idleBehavior === 'show_default') {  
                     showDefaultContent();
                 }
                 return;
@@ -226,6 +232,9 @@
                     break; // On prend la première correspondance
                 }
             }
+
+            console.log("activeScheduledPlaylistId:", activeScheduledPlaylistId);
+            console.log("targetPlaylistId:", targetPlaylistId);
 
             // Si on a trouvé une playlist planifiée et qu'elle est différente de celle active
             if (targetPlaylistId && targetPlaylistId !== activeScheduledPlaylistId) {

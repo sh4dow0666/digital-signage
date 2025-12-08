@@ -475,22 +475,6 @@ def handle_delete_playlist(data):
         del playlists[playlist_id]
         save_playlists()
         
-        emit('state_update', {
-            'screens': screens,
-            'content': content_library,
-            'playlists': playlists,
-            'schedules': schedules
-        }, broadcast=True)
-
-@socketio.on('delete_playlist')
-def handle_delete_playlist(data):
-    """Supprime une playlist"""
-    playlist_id = data['playlist_id']
-    
-    if playlist_id in playlists:
-        del playlists[playlist_id]
-        save_playlists()
-        
         # Nettoyer les plannings qui utilisent cette playlist
         for screen_id in schedules:
             schedules[screen_id] = [s for s in schedules[screen_id] if s.get('playlist_id') != playlist_id]
