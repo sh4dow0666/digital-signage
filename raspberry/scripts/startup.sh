@@ -99,7 +99,7 @@ echo "🚀 Démarrage du système Digital Signage..."
 # Démarrer le contrôleur si le rôle est activé
 if [ "$ROLE_CONTROLLER" = "true" ]; then
     echo "🎮 Démarrage du contrôleur..."
-    cd $BASE_DIR
+    cd /opt/digitial-signage/
     python3 gestion_raspberry.py &
     CONTROLLER_PID=$!
     echo "✅ Contrôleur démarré (PID: $CONTROLLER_PID)"

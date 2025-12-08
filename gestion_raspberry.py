@@ -580,7 +580,7 @@ if __name__ == '__main__':
     print("=" * 60)
     print("\n📋 Instructions de démarrage:\n")
     print("1. Installez les dépendances:")
-    print("   pip install flask flask-socketio\n")
+    print("   pip install flask flask-socketio python-socketio requests isodate\n")
     print("2. Lancez le serveur sur votre réseau local\n")
     print("3. Interface de gestion:")
     print("   http://VOTRE_IP:5000/\n")
@@ -596,4 +596,4 @@ if __name__ == '__main__':
     print("   Les données seront conservées après redémarrage!\n")
     print("=" * 60)
     
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)

@@ -70,7 +70,7 @@ systemctl disable hostapd 2>/dev/null || true
 systemctl disable dnsmasq 2>/dev/null || true
 
 echo -e "${YELLOW}📦 Installation des dépendances Python...${NC}"
-pip3 install flask flask-socketio python-socketio requests --break-system-packages
+pip3 install flask flask-socketio python-socketio requests isodate --break-system-packages
 
 echo -e "${YELLOW}📁 Création du répertoire d'installation...${NC}"
 mkdir -p $INSTALL_DIR

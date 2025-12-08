@@ -405,7 +405,7 @@
                     document.getElementById('step' + currentStep).classList.add('active');
                     updateProgress();
 
-                    response = await fetch('/system', {
+                    await fetch('/system', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
