@@ -200,6 +200,57 @@ def get_youtube_metadata(video_id):
     except Exception as e:
         return jsonify({'error': f'Erreur lors du traitement des données: {str(e)}'}), 500
 
+@app.route('/api/settings', methods=['GET'])
+def get_settings():
+    """Récupère les paramètres de configuration"""
+    config_file = os.path.join(DATA_DIR, 'config.json')
+    settings = {
+        'youtube_api_key': ''
+    }
+
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                settings['youtube_api_key'] = config.get('youtube_api_key', '')
+        except Exception as e:
+            print(f"⚠️ Erreur lors de la lecture de la configuration: {e}")
+
+    return jsonify(settings)
+
+@app.route('/api/settings', methods=['POST'])
+def save_settings():
+    """Sauvegarde les paramètres de configuration"""
+    config_file = os.path.join(DATA_DIR, 'config.json')
+
+    try:
+        data = request.get_json()
+        youtube_api_key = data.get('youtube_api_key', '')
+
+        # Charger la config existante ou créer une nouvelle
+        config = {}
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+            except:
+                pass
+
+        # Mettre à jour la clé API
+        config['youtube_api_key'] = youtube_api_key
+
+        # Sauvegarder
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+
+        print(f"💾 Paramètres sauvegardés: Clé API YouTube {'configurée' if youtube_api_key else 'supprimée'}")
+
+        return jsonify({'success': True, 'message': 'Paramètres sauvegardés avec succès'})
+
+    except Exception as e:
+        print(f"❌ Erreur lors de la sauvegarde des paramètres: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @socketio.on('register_screen')
 def handle_register_screen(data):
     """Enregistre un nouvel écran"""

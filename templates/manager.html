@@ -5,14 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionnaire d'Affichage Multi-Écrans</title>
     <script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
-    <link href="{{ url_for('static', filename='css/fontawesome.all.min.css') }}" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" />
 </head>
 <body>
     <div class="container">
-        <header>
+        <header style="position: relative;">
             <h1>🖥️ Gestionnaire d'Affichage Multi-Écrans</h1>
             <p class="subtitle">Contrôlez tous vos écrans depuis une seule interface</p>
+            <button onclick="openSettingsModal()" style="position: absolute; top: 20px; right: 20px; background: #667eea; color: white; border: none; border-radius: 8px; padding: 10px 20px; cursor: pointer; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;" title="Paramètres">
+                ⚙️ Paramètres
+            </button>
         </header>
 
         <!-- Modal Gestion Globale Playlists -->
@@ -208,11 +211,11 @@
                 </div>
                 <div class="content-form">
                     <input type="hidden" id="scheduler-screen-id">
-                    
+
                     <h3 style="color: #667eea; margin-bottom: 15px;">Planning actuel</h3>
                     <div id="current-schedule-list" style="margin-bottom: 20px; max-height: 300px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px; background: #fafafa;"></div>
-                    
-                    <h3 style="color: #667eea; margin-bottom: 15px;">Ajouter une plage horaire</h3>
+
+                    <h3 id="scheduler-form-title" style="color: #667eea; margin-bottom: 15px;">Ajouter une plage horaire</h3>
                     <div class="form-group">
                         <label>Playlist à afficher</label>
                         <select id="scheduler-playlist-select"></select>
@@ -225,7 +228,35 @@
                         <label>Heure de fin</label>
                         <input type="time" id="scheduler-end">
                     </div>
-                    <button class="btn" onclick="addScheduleEntry()">+ Ajouter au Planning</button>
+                    <button id="scheduler-submit-btn" class="btn" onclick="saveScheduleEntry()">+ Ajouter au Planning</button>
+                    <button id="scheduler-cancel-edit-btn" class="btn" onclick="cancelScheduleEdit()" style="display: none; margin-top: 10px; background: #6c757d;">✖️ Annuler la modification</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Paramètres -->
+        <div id="settings-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>⚙️ Paramètres</h2>
+                    <button class="close-modal" onclick="closeSettingsModal()">&times;</button>
+                </div>
+                <div class="content-form">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">Configuration YouTube API</h3>
+                    <div class="form-group">
+                        <label>Clé API YouTube</label>
+                        <input type="text" id="settings-youtube-api-key" placeholder="Entrez votre clé API YouTube">
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            Cette clé permet de récupérer automatiquement les métadonnées (titre, durée) des vidéos YouTube.<br>
+                            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color: #667eea;">Obtenir une clé API YouTube</a>
+                        </p>
+                    </div>
+
+                    <div id="settings-api-status" style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none;">
+                        <strong id="settings-api-status-text"></strong>
+                    </div>
+
+                    <button class="btn" onclick="saveSettings()">💾 Sauvegarder</button>
                 </div>
             </div>
         </div>
@@ -278,6 +309,7 @@
         let playlists = {};
         let schedules = {};
         let editingPlaylist = [];
+        let editingScheduleEntry = null; // {screenId, index} quand on édite une entrée
 
         // Fonctions de conversion de durée
         function secondsToHMS(seconds) {
@@ -712,6 +744,7 @@
 
         function openScheduler(screenId) {
             document.getElementById('scheduler-screen-id').value = screenId;
+            cancelScheduleEdit(); // Réinitialiser le mode édition
             updateSchedulerPlaylistSelect();
             updateCurrentSchedule(screenId);
             document.getElementById('scheduler-modal').classList.add('active');
@@ -719,6 +752,7 @@
         }
 
         function closeSchedulerModal() {
+            cancelScheduleEdit(); // Réinitialiser le mode édition à la fermeture
             document.getElementById('scheduler-modal').classList.remove('active');
             document.body.classList.remove('modal-open');
         }
@@ -761,13 +795,16 @@
                         <strong style="color: #333;">${entry.start} - ${entry.end}</strong>
                         <span style="color: #666; margin-left: 10px;" title="${playlistNameFull}">• ${playlistName}</span>
                     </div>
-                    <button class="btn btn-danger" onclick="removeScheduleEntry('${screenId}', ${index})" style="width: auto; padding: 4px 12px; font-size: 0.85em;">🗑️</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-edit" onclick="editScheduleEntry('${screenId}', ${index})" style="width: auto; padding: 4px 12px; font-size: 0.85em;">✏️ Éditer</button>
+                        <button class="btn btn-danger" onclick="removeScheduleEntry('${screenId}', ${index})" style="width: auto; padding: 4px 12px; font-size: 0.85em;">🗑️</button>
+                    </div>
                 `;
                 container.appendChild(item);
             });
         }
 
-        function addScheduleEntry() {
+        function saveScheduleEntry() {
             const screenId = document.getElementById('scheduler-screen-id').value;
             const playlistId = document.getElementById('scheduler-playlist-select').value;
             const start = document.getElementById('scheduler-start').value;
@@ -789,7 +826,14 @@
             }
 
             // Vérifier s'il y a un chevauchement avec une plage horaire existante
-            for (const entry of schedules[screenId]) {
+            // (sauf avec l'entrée qu'on est en train d'éditer)
+            for (let i = 0; i < schedules[screenId].length; i++) {
+                // Si on est en mode édition, ignorer l'entrée qu'on édite
+                if (editingScheduleEntry && i === editingScheduleEntry.index) {
+                    continue;
+                }
+
+                const entry = schedules[screenId][i];
                 // Deux plages se chevauchent si :
                 // - La nouvelle commence avant la fin de l'existante ET
                 // - La nouvelle se termine après le début de l'existante
@@ -801,11 +845,21 @@
                 }
             }
 
-            schedules[screenId].push({
-                playlist_id: playlistId,
-                start: start,
-                end: end
-            });
+            // Si on est en mode édition, modifier l'entrée existante
+            if (editingScheduleEntry) {
+                schedules[screenId][editingScheduleEntry.index] = {
+                    playlist_id: playlistId,
+                    start: start,
+                    end: end
+                };
+            } else {
+                // Sinon, ajouter une nouvelle entrée
+                schedules[screenId].push({
+                    playlist_id: playlistId,
+                    start: start,
+                    end: end
+                });
+            }
 
             // Tri automatique par heure de début (format 24h)
             schedules[screenId].sort((a, b) => {
@@ -817,11 +871,48 @@
                 schedule: schedules[screenId]
             });
 
+            // Réinitialiser le formulaire et le mode édition
             document.getElementById('scheduler-playlist-select').value = '';
             document.getElementById('scheduler-start').value = '';
             document.getElementById('scheduler-end').value = '';
+            cancelScheduleEdit();
 
             updateCurrentSchedule(screenId);
+        }
+
+        function editScheduleEntry(screenId, index) {
+            const entry = schedules[screenId][index];
+
+            // Pré-remplir le formulaire
+            document.getElementById('scheduler-playlist-select').value = entry.playlist_id;
+            document.getElementById('scheduler-start').value = entry.start;
+            document.getElementById('scheduler-end').value = entry.end;
+
+            // Activer le mode édition
+            editingScheduleEntry = { screenId, index };
+
+            // Changer le titre et le bouton
+            document.getElementById('scheduler-form-title').textContent = '✏️ Modifier la plage horaire';
+            document.getElementById('scheduler-submit-btn').innerHTML = '💾 Enregistrer les modifications';
+            document.getElementById('scheduler-cancel-edit-btn').style.display = 'block';
+
+            // Scroll vers le formulaire
+            document.getElementById('scheduler-form-title').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function cancelScheduleEdit() {
+            // Réinitialiser le mode édition
+            editingScheduleEntry = null;
+
+            // Restaurer le titre et le bouton
+            document.getElementById('scheduler-form-title').textContent = 'Ajouter une plage horaire';
+            document.getElementById('scheduler-submit-btn').innerHTML = '+ Ajouter au Planning';
+            document.getElementById('scheduler-cancel-edit-btn').style.display = 'none';
+
+            // Vider les champs
+            document.getElementById('scheduler-playlist-select').value = '';
+            document.getElementById('scheduler-start').value = '';
+            document.getElementById('scheduler-end').value = '';
         }
 
         function removeScheduleEntry(screenId, index) {
@@ -1103,6 +1194,70 @@
                 });
                 scheduleContainer.innerHTML = html;
             }
+        }
+
+        // PARAMÈTRES
+
+        function openSettingsModal() {
+            // Charger la clé API actuelle
+            fetch('/api/settings')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('settings-youtube-api-key').value = data.youtube_api_key || '';
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des paramètres:', error);
+                });
+
+            document.getElementById('settings-modal').classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+            document.getElementById('settings-api-status').style.display = 'none';
+        }
+
+        function saveSettings() {
+            const apiKey = document.getElementById('settings-youtube-api-key').value;
+            const statusDiv = document.getElementById('settings-api-status');
+            const statusText = document.getElementById('settings-api-status-text');
+
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    youtube_api_key: apiKey
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusDiv.style.background = '#d4edda';
+                    statusDiv.style.color = '#155724';
+                    statusText.textContent = '✅ Paramètres sauvegardés avec succès !';
+                } else {
+                    statusDiv.style.background = '#f8d7da';
+                    statusDiv.style.color = '#721c24';
+                    statusText.textContent = '❌ Erreur lors de la sauvegarde';
+                }
+                statusDiv.style.display = 'block';
+
+                // Masquer le message après 3 secondes
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                statusDiv.style.background = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusText.textContent = '❌ Erreur de connexion au serveur';
+                statusDiv.style.display = 'block';
+            });
         }
 
         // Auto-update
