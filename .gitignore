@@ -40,4 +40,4 @@ Thumbs.db
 git_token
 
 # Data files (optional - uncomment if you don't want to version data)
-# data/*.json
+data/*.json
