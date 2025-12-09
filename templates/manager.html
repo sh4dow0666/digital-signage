@@ -339,6 +339,10 @@
                         <div class="stat-number" id="content-count">0</div>
                         <div class="stat-label">Contenus</div>
                     </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="playlist-count">0</div>
+                        <div class="stat-label">Playlists</div>
+                    </div>
                 </div>
                 <div class="screen-grid" id="screens-container"></div>
             </div>
@@ -490,6 +494,7 @@
             document.getElementById('total-screens').textContent = total;
             document.getElementById('online-screens').textContent = online;
             document.getElementById('content-count').textContent = contentLibrary.length;
+            document.getElementById('playlist-count').textContent = Object.keys(playlists).length;
         }
 
         function updateScreens() {
