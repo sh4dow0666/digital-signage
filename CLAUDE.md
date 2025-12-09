@@ -155,3 +155,6 @@ Each data type follows this pattern:
 - CORS is fully open (`cors_allowed_origins="*"`) - restrict for production
 - No authentication or authorization implemented
 - Display clients trust all server commands without validation
+
+### End of lines
+end of line for each file must be in LF format 
