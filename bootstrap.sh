@@ -77,16 +77,6 @@ echo ""
 echo -e "${YELLOW}🔧 Configuration des permissions...${NC}"
 find "$INSTALL_DIR" -name "*.sh" -type f -exec chmod +x {} \;
 
-# Fixer les fins de lignes (au cas où le clonage ait causé des problèmes)
-echo -e "${YELLOW}🔧 Normalisation des fins de lignes...${NC}"
-if command -v dos2unix &> /dev/null; then
-    find "$INSTALL_DIR" -name "*.sh" -type f -exec dos2unix {} \; 2>/dev/null || true
-else
-    # Utiliser sed si dos2unix n'est pas disponible
-    find "$INSTALL_DIR" -name "*.sh" -type f -exec sed -i 's/\r$//' {} \;
-fi
-echo -e "${GREEN}✅ Fins de lignes normalisées${NC}"
-
 # Lancer l'installation complète
 echo -e "${YELLOW}🚀 Lancement de l'installation complète...${NC}"
 echo ""
