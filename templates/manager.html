@@ -1484,6 +1484,7 @@
                 .catch(error => {
                     console.error('Erreur lors de la vérification automatique des mises à jour:', error);
                 });
+            setTimeout(checkForUpdatesOnLoad, 60000); // Vérifier toutes les minutes
         }
 
         // Auto-update
