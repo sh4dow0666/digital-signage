@@ -13,9 +13,14 @@
         <header style="position: relative;">
             <h1>🖥️ Gestionnaire d'Affichage Multi-Écrans</h1>
             <p class="subtitle">Contrôlez tous vos écrans depuis une seule interface</p>
-            <button onclick="openSettingsModal()" style="position: absolute; top: 20px; right: 20px; background: #667eea; color: white; border: none; border-radius: 8px; padding: 10px 20px; cursor: pointer; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;" title="Paramètres">
-                ⚙️ Paramètres
-            </button>
+            <div style="position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; align-items: center;">
+                <button id="update-badge" onclick="openUpdateModal()" style="display: none; background: #28a745; color: white; border: none; border-radius: 8px; padding: 10px 20px; cursor: pointer; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); gap: 8px; align-items: center;" title="Mise à jour disponible">
+                    🔄 Mise à jour disponible
+                </button>
+                <button onclick="openSettingsModal()" style="background: #667eea; color: white; border: none; border-radius: 8px; padding: 10px 20px; cursor: pointer; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;" title="Paramètres">
+                    ⚙️ Paramètres
+                </button>
+            </div>
         </header>
 
         <!-- Modal Gestion Globale Playlists -->
@@ -257,6 +262,60 @@
                     </div>
 
                     <button class="btn" onclick="saveSettings()">💾 Sauvegarder</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Mise à jour -->
+        <div id="update-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🔄 Mise à jour système</h2>
+                    <button class="close-modal" onclick="closeUpdateModal()">&times;</button>
+                </div>
+                <div class="content-form">
+                    <div id="update-info-container" style="margin-bottom: 20px;">
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #667eea;">📊 État actuel</strong>
+                            </div>
+                            <div style="line-height: 1.8;">
+                                <div>📍 Commit actuel: <code id="update-current-commit">--</code></div>
+                                <div id="update-remote-info" style="display: none;">
+                                    <div>🌐 Commit distant: <code id="update-remote-commit">--</code></div>
+                                    <div>📦 Commits en retard: <strong id="update-commits-behind" style="color: #dc3545;">--</strong></div>
+                                    <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 5px; border-left: 3px solid #667eea;">
+                                        <strong>Dernier commit:</strong><br>
+                                        <span id="update-latest-message" style="font-style: italic; color: #666;">--</span>
+                                    </div>
+                                </div>
+                                <div id="update-uptodate-info" style="display: none; color: #28a745; font-weight: bold; margin-top: 10px;">
+                                    ✅ Vous êtes à jour !
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="update-error-container" style="display: none; background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <strong>⚠️ Erreur:</strong>
+                            <div id="update-error-message" style="margin-top: 8px;"></div>
+                        </div>
+
+                        <div id="update-status-container" style="display: none; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <strong id="update-status-text"></strong>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn" onclick="checkForUpdates()" id="update-check-btn">🔍 Vérifier les mises à jour</button>
+                        <button class="btn" onclick="applyUpdate()" id="update-apply-btn" style="display: none; background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">⬇️ Installer la mise à jour</button>
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 8px; border-left: 3px solid #ffc107;">
+                        <strong style="color: #856404;">ℹ️ Note importante:</strong>
+                        <div style="font-size: 0.9em; color: #856404; margin-top: 5px;">
+                            Après une mise à jour, il est recommandé de redémarrer le serveur pour appliquer tous les changements.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1260,8 +1319,173 @@
             });
         }
 
+        // MISE À JOUR SYSTÈME
+
+        let updateInfo = null;
+
+        function openUpdateModal() {
+            document.getElementById('update-modal').classList.add('active');
+            document.body.classList.add('modal-open');
+            // Vérifier automatiquement les mises à jour à l'ouverture
+            checkForUpdates();
+        }
+
+        function closeUpdateModal() {
+            document.getElementById('update-modal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+        }
+
+        function checkForUpdates() {
+            const checkBtn = document.getElementById('update-check-btn');
+            const applyBtn = document.getElementById('update-apply-btn');
+            const errorContainer = document.getElementById('update-error-container');
+            const errorMessage = document.getElementById('update-error-message');
+            const remoteInfo = document.getElementById('update-remote-info');
+            const uptodateInfo = document.getElementById('update-uptodate-info');
+
+            // Désactiver le bouton et afficher un état de chargement
+            checkBtn.disabled = true;
+            checkBtn.textContent = '🔄 Vérification en cours...';
+            applyBtn.style.display = 'none';
+            errorContainer.style.display = 'none';
+            remoteInfo.style.display = 'none';
+            uptodateInfo.style.display = 'none';
+
+            fetch('/api/check-update')
+                .then(response => response.json())
+                .then(data => {
+                    updateInfo = data;
+
+                    // Afficher le commit actuel
+                    document.getElementById('update-current-commit').textContent = data.current_commit || '--';
+
+                    if (data.error) {
+                        errorMessage.textContent = data.error;
+                        errorContainer.style.display = 'block';
+                    } else if (data.available) {
+                        // Une mise à jour est disponible
+                        document.getElementById('update-remote-commit').textContent = data.remote_commit || '--';
+                        document.getElementById('update-commits-behind').textContent = data.commits_behind || '?';
+                        document.getElementById('update-latest-message').textContent = data.latest_message || 'Pas de message';
+                        remoteInfo.style.display = 'block';
+                        applyBtn.style.display = 'block';
+
+                        // Afficher le badge de mise à jour dans le header
+                        const updateBadge = document.getElementById('update-badge');
+                        updateBadge.style.display = 'flex';
+                    } else {
+                        // À jour
+                        uptodateInfo.style.display = 'block';
+                        // Cacher le badge de mise à jour
+                        const updateBadge = document.getElementById('update-badge');
+                        updateBadge.style.display = 'none';
+                    }
+
+                    checkBtn.disabled = false;
+                    checkBtn.textContent = '🔍 Vérifier les mises à jour';
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la vérification des mises à jour:', error);
+                    errorMessage.textContent = 'Erreur de connexion au serveur';
+                    errorContainer.style.display = 'block';
+                    checkBtn.disabled = false;
+                    checkBtn.textContent = '🔍 Vérifier les mises à jour';
+                });
+        }
+
+        function applyUpdate() {
+            if (!updateInfo || !updateInfo.available) {
+                alert('Aucune mise à jour disponible');
+                return;
+            }
+
+            if (!confirm(`Voulez-vous installer la mise à jour ?\n\nCela va télécharger ${updateInfo.commits_behind} commit(s) depuis le dépôt distant.\n\n⚠️ Il est recommandé de redémarrer le serveur après la mise à jour.`)) {
+                return;
+            }
+
+            const applyBtn = document.getElementById('update-apply-btn');
+            const checkBtn = document.getElementById('update-check-btn');
+            const statusContainer = document.getElementById('update-status-container');
+            const statusText = document.getElementById('update-status-text');
+            const errorContainer = document.getElementById('update-error-container');
+            const errorMessage = document.getElementById('update-error-message');
+
+            // Désactiver les boutons et afficher un état de chargement
+            applyBtn.disabled = true;
+            applyBtn.textContent = '⬇️ Installation en cours...';
+            checkBtn.disabled = true;
+            errorContainer.style.display = 'none';
+            statusContainer.style.display = 'none';
+
+            fetch('/api/apply-update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        statusContainer.style.background = '#d4edda';
+                        statusContainer.style.color = '#155724';
+                        statusText.innerHTML = `
+                            ✅ Mise à jour installée avec succès !<br>
+                            <div style="margin-top: 10px; font-size: 0.9em;">
+                                <strong>Nouveau commit:</strong> <code>${data.new_commit}</code><br>
+                                ${data.requires_restart ? '<strong style="color: #dc3545;">⚠️ Redémarrage du serveur recommandé</strong>' : ''}
+                            </div>
+                        `;
+                        statusContainer.style.display = 'block';
+
+                        // Cacher le badge de mise à jour
+                        const updateBadge = document.getElementById('update-badge');
+                        updateBadge.style.display = 'none';
+
+                        // Mettre à jour l'affichage
+                        document.getElementById('update-current-commit').textContent = data.new_commit;
+                        document.getElementById('update-remote-info').style.display = 'none';
+                        document.getElementById('update-uptodate-info').style.display = 'block';
+                        applyBtn.style.display = 'none';
+                    } else {
+                        errorMessage.textContent = data.error || 'Erreur inconnue lors de l\'installation';
+                        errorContainer.style.display = 'block';
+                    }
+
+                    applyBtn.disabled = false;
+                    applyBtn.textContent = '⬇️ Installer la mise à jour';
+                    checkBtn.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Erreur lors de l\'application de la mise à jour:', error);
+                    errorMessage.textContent = 'Erreur de connexion au serveur';
+                    errorContainer.style.display = 'block';
+                    applyBtn.disabled = false;
+                    applyBtn.textContent = '⬇️ Installer la mise à jour';
+                    checkBtn.disabled = false;
+                });
+        }
+
+        // Vérification automatique au chargement de la page
+        function checkForUpdatesOnLoad() {
+            fetch('/api/check-update')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.available) {
+                        // Afficher le badge de mise à jour
+                        const updateBadge = document.getElementById('update-badge');
+                        updateBadge.style.display = 'flex';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la vérification automatique des mises à jour:', error);
+                });
+        }
+
         // Auto-update
         socket.emit('get_state');
+
+        // Vérifier les mises à jour au chargement de la page
+        checkForUpdatesOnLoad();
     </script>
 </body>
 </html>

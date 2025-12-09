@@ -12,6 +12,7 @@ from datetime import datetime
 import requests
 import re
 import isodate
+import subprocess
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'votre-cle-secrete-ici'
@@ -250,6 +251,169 @@ def save_settings():
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde des paramètres: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/check-update', methods=['GET'])
+def check_update():
+    """Vérifie si une mise à jour est disponible depuis le dépôt Git"""
+    try:
+        # Vérifier que nous sommes dans un dépôt Git
+        result = subprocess.run(
+            ['git', 'rev-parse', '--git-dir'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        if result.returncode != 0:
+            return jsonify({
+                'available': False,
+                'error': 'Ce répertoire n\'est pas un dépôt Git',
+                'is_git_repo': False
+            })
+
+        # Récupérer les informations du dépôt distant
+        subprocess.run(
+            ['git', 'fetch'],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+
+        # Obtenir le hash du commit local
+        local_result = subprocess.run(
+            ['git', 'rev-parse', 'HEAD'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        local_hash = local_result.stdout.strip()
+
+        # Obtenir le hash du commit distant
+        remote_result = subprocess.run(
+            ['git', 'rev-parse', '@{u}'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        if remote_result.returncode != 0:
+            return jsonify({
+                'available': False,
+                'error': 'Impossible de récupérer les informations du dépôt distant',
+                'is_git_repo': True,
+                'current_commit': local_hash[:7]
+            })
+
+        remote_hash = remote_result.stdout.strip()
+
+        # Vérifier s'il y a des commits en avance
+        if local_hash != remote_hash:
+            # Compter le nombre de commits en retard
+            commits_result = subprocess.run(
+                ['git', 'rev-list', '--count', f'HEAD..@{{u}}'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            commits_behind = int(commits_result.stdout.strip()) if commits_result.returncode == 0 else 0
+
+            # Obtenir le message du dernier commit distant
+            log_result = subprocess.run(
+                ['git', 'log', '@{u}', '-1', '--pretty=format:%s'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            latest_message = log_result.stdout.strip() if log_result.returncode == 0 else ''
+
+            return jsonify({
+                'available': True,
+                'is_git_repo': True,
+                'current_commit': local_hash[:7],
+                'remote_commit': remote_hash[:7],
+                'commits_behind': commits_behind,
+                'latest_message': latest_message
+            })
+        else:
+            return jsonify({
+                'available': False,
+                'is_git_repo': True,
+                'current_commit': local_hash[:7],
+                'message': 'Vous êtes à jour'
+            })
+
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            'available': False,
+            'error': 'Timeout lors de la vérification de la mise à jour'
+        }), 500
+    except Exception as e:
+        return jsonify({
+            'available': False,
+            'error': f'Erreur lors de la vérification: {str(e)}'
+        }), 500
+
+@app.route('/api/apply-update', methods=['POST'])
+def apply_update():
+    """Applique la mise à jour en effectuant un git pull"""
+    try:
+        # Vérifier qu'il n'y a pas de modifications locales non commitées
+        status_result = subprocess.run(
+            ['git', 'status', '--porcelain'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        if status_result.stdout.strip():
+            return jsonify({
+                'success': False,
+                'error': 'Des modifications locales non commitées existent. Veuillez les commiter ou les annuler avant de mettre à jour.'
+            }), 400
+
+        # Effectuer le git pull
+        pull_result = subprocess.run(
+            ['git', 'pull'],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+
+        if pull_result.returncode != 0:
+            return jsonify({
+                'success': False,
+                'error': f'Erreur lors du git pull: {pull_result.stderr}'
+            }), 500
+
+        # Obtenir le nouveau hash de commit
+        hash_result = subprocess.run(
+            ['git', 'rev-parse', 'HEAD'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        new_hash = hash_result.stdout.strip()
+
+        print(f"✅ Mise à jour appliquée avec succès: {new_hash[:7]}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Mise à jour appliquée avec succès',
+            'new_commit': new_hash[:7],
+            'output': pull_result.stdout,
+            'requires_restart': True  # Indiquer qu'un redémarrage peut être nécessaire
+        })
+
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            'success': False,
+            'error': 'Timeout lors de l\'application de la mise à jour'
+        }), 500
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Erreur lors de l\'application de la mise à jour: {str(e)}'
+        }), 500
 
 @socketio.on('register_screen')
 def handle_register_screen(data):
