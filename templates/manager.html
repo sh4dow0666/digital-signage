@@ -764,7 +764,8 @@
             Object.values(playlists).forEach(playlist => {
                 const option = document.createElement('option');
                 option.value = playlist.id;
-                option.textContent = `${truncateText(playlist.name, 30)} (${playlist.items.length} contenus)`;
+                option.textContent = `${truncateText(playlist.name, 20)} (${playlist.items.length} contenus)`;
+                option.title = `${playlist.name} (${playlist.items.length} contenus)`; // Afficher le nom complet au survol
                 select.appendChild(option);
             });
         }
