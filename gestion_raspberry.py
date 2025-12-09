@@ -252,13 +252,53 @@ def save_settings():
         print(f"❌ Erreur lors de la sauvegarde des paramètres: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+def get_git_repo_path():
+    """Trouve le chemin du dépôt Git (normalement /home/$USER/DS)"""
+    import pwd
+
+    # Si on tourne depuis /opt/digital-signage, le dépôt Git est ailleurs
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Essayer de détecter l'utilisateur qui a lancé le service
+    try:
+        # Récupérer l'utilisateur qui possède le répertoire de travail
+        stat_info = os.stat(current_dir)
+        user_info = pwd.getpwuid(stat_info.st_uid)
+        username = user_info.pw_name
+    except:
+        # Fallback: utiliser $USER ou l'utilisateur actuel
+        username = os.environ.get('USER', 'pi')
+
+    # Chercher le dépôt Git dans l'ordre de préférence
+    possible_paths = [
+        f'/home/{username}/DS',
+        current_dir,  # Au cas où on soit déjà dans le dépôt
+    ]
+
+    for path in possible_paths:
+        if os.path.exists(os.path.join(path, '.git')):
+            return path
+
+    return None
+
 @app.route('/api/check-update', methods=['GET'])
 def check_update():
     """Vérifie si une mise à jour est disponible depuis le dépôt Git"""
     try:
+        # Trouver le dépôt Git
+        git_repo_path = get_git_repo_path()
+
+        if not git_repo_path:
+            return jsonify({
+                'available': False,
+                'error': 'Dépôt Git introuvable. Vérifiez que le projet a été cloné dans /home/$USER/DS',
+                'is_git_repo': False
+            })
+
         # Vérifier que nous sommes dans un dépôt Git
         result = subprocess.run(
             ['git', 'rev-parse', '--git-dir'],
+            cwd=git_repo_path,
             capture_output=True,
             text=True,
             timeout=5
@@ -267,13 +307,14 @@ def check_update():
         if result.returncode != 0:
             return jsonify({
                 'available': False,
-                'error': 'Ce répertoire n\'est pas un dépôt Git',
+                'error': f'{git_repo_path} n\'est pas un dépôt Git',
                 'is_git_repo': False
             })
 
         # Récupérer les informations du dépôt distant
         subprocess.run(
             ['git', 'fetch'],
+            cwd=git_repo_path,
             capture_output=True,
             text=True,
             timeout=30
@@ -282,6 +323,7 @@ def check_update():
         # Obtenir le hash du commit local
         local_result = subprocess.run(
             ['git', 'rev-parse', 'HEAD'],
+            cwd=git_repo_path,
             capture_output=True,
             text=True,
             timeout=5
@@ -291,6 +333,7 @@ def check_update():
         # Obtenir le hash du commit distant
         remote_result = subprocess.run(
             ['git', 'rev-parse', '@{u}'],
+            cwd=git_repo_path,
             capture_output=True,
             text=True,
             timeout=5
@@ -301,7 +344,8 @@ def check_update():
                 'available': False,
                 'error': 'Impossible de récupérer les informations du dépôt distant',
                 'is_git_repo': True,
-                'current_commit': local_hash[:7]
+                'current_commit': local_hash[:7],
+                'git_repo_path': git_repo_path
             })
 
         remote_hash = remote_result.stdout.strip()
@@ -311,6 +355,7 @@ def check_update():
             # Compter le nombre de commits en retard
             commits_result = subprocess.run(
                 ['git', 'rev-list', '--count', f'HEAD..@{{u}}'],
+                cwd=git_repo_path,
                 capture_output=True,
                 text=True,
                 timeout=5
@@ -320,6 +365,7 @@ def check_update():
             # Obtenir le message du dernier commit distant
             log_result = subprocess.run(
                 ['git', 'log', '@{u}', '-1', '--pretty=format:%s'],
+                cwd=git_repo_path,
                 capture_output=True,
                 text=True,
                 timeout=5
@@ -332,14 +378,16 @@ def check_update():
                 'current_commit': local_hash[:7],
                 'remote_commit': remote_hash[:7],
                 'commits_behind': commits_behind,
-                'latest_message': latest_message
+                'latest_message': latest_message,
+                'git_repo_path': git_repo_path
             })
         else:
             return jsonify({
                 'available': False,
                 'is_git_repo': True,
                 'current_commit': local_hash[:7],
-                'message': 'Vous êtes à jour'
+                'message': 'Vous êtes à jour',
+                'git_repo_path': git_repo_path
             })
 
     except subprocess.TimeoutExpired:
@@ -355,11 +403,21 @@ def check_update():
 
 @app.route('/api/apply-update', methods=['POST'])
 def apply_update():
-    """Applique la mise à jour en effectuant un git pull"""
+    """Applique la mise à jour en effectuant un git pull et copie les fichiers vers /opt/digital-signage"""
     try:
+        # Trouver le dépôt Git
+        git_repo_path = get_git_repo_path()
+
+        if not git_repo_path:
+            return jsonify({
+                'success': False,
+                'error': 'Dépôt Git introuvable. Vérifiez que le projet a été cloné dans /home/$USER/DS'
+            }), 400
+
         # Vérifier qu'il n'y a pas de modifications locales non commitées
         status_result = subprocess.run(
             ['git', 'status', '--porcelain'],
+            cwd=git_repo_path,
             capture_output=True,
             text=True,
             timeout=5
@@ -368,12 +426,13 @@ def apply_update():
         if status_result.stdout.strip():
             return jsonify({
                 'success': False,
-                'error': 'Des modifications locales non commitées existent. Veuillez les commiter ou les annuler avant de mettre à jour.'
+                'error': 'Des modifications locales non commitées existent dans le dépôt Git. Veuillez les commiter ou les annuler avant de mettre à jour.'
             }), 400
 
         # Effectuer le git pull
         pull_result = subprocess.run(
             ['git', 'pull'],
+            cwd=git_repo_path,
             capture_output=True,
             text=True,
             timeout=60
@@ -388,19 +447,77 @@ def apply_update():
         # Obtenir le nouveau hash de commit
         hash_result = subprocess.run(
             ['git', 'rev-parse', 'HEAD'],
+            cwd=git_repo_path,
             capture_output=True,
             text=True,
             timeout=5
         )
         new_hash = hash_result.stdout.strip()
 
-        print(f"✅ Mise à jour appliquée avec succès: {new_hash[:7]}")
+        print(f"✅ Git pull effectué avec succès: {new_hash[:7]}")
+
+        # Copier les fichiers vers /opt/digital-signage si nécessaire
+        install_dir = '/opt/digital-signage'
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+
+        files_copied = False
+        if current_dir.startswith(install_dir) and git_repo_path != install_dir:
+            print(f"📝 Copie des fichiers de {git_repo_path} vers {install_dir}...")
+
+            try:
+                # Copier tous les fichiers sauf le dossier data et logs
+                copy_result = subprocess.run(
+                    [
+                        'rsync', '-av', '--progress',
+                        '--exclude', 'data/',
+                        '--exclude', 'logs/',
+                        '--exclude', '.git/',
+                        '--exclude', '__pycache__/',
+                        '--exclude', '*.pyc',
+                        f'{git_repo_path}/',
+                        f'{install_dir}/'
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+
+                if copy_result.returncode != 0:
+                    # Si rsync n'est pas disponible, utiliser cp
+                    print("⚠️ rsync non disponible, utilisation de cp...")
+                    copy_result = subprocess.run(
+                        ['cp', '-r', f'{git_repo_path}/.', install_dir],
+                        capture_output=True,
+                        text=True,
+                        timeout=60
+                    )
+
+                    if copy_result.returncode != 0:
+                        return jsonify({
+                            'success': False,
+                            'error': f'Erreur lors de la copie des fichiers: {copy_result.stderr}'
+                        }), 500
+
+                files_copied = True
+                print(f"✅ Fichiers copiés avec succès vers {install_dir}")
+
+            except subprocess.TimeoutExpired:
+                return jsonify({
+                    'success': False,
+                    'error': 'Timeout lors de la copie des fichiers'
+                }), 500
+            except Exception as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'Erreur lors de la copie des fichiers: {str(e)}'
+                }), 500
 
         return jsonify({
             'success': True,
             'message': 'Mise à jour appliquée avec succès',
             'new_commit': new_hash[:7],
             'output': pull_result.stdout,
+            'files_copied': files_copied,
             'requires_restart': True  # Indiquer qu'un redémarrage peut être nécessaire
         })
 
