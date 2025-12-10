@@ -532,6 +532,52 @@ def apply_update():
             'error': f'Erreur lors de l\'application de la mise à jour: {str(e)}'
         }), 500
 
+@app.route('/restart-service', methods=['POST'])
+def restart_service():
+    """Redémarre le service digital-signage"""
+    try:
+        print("🔄 Redémarrage du service digital-signage demandé...")
+
+        # Essayer de redémarrer le service avec sudo
+        restart_result = subprocess.run(
+            ['sudo', 'systemctl', 'restart', 'digital-signage.service'],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        if restart_result.returncode == 0:
+            print("✅ Service redémarré avec succès")
+            return jsonify({
+                'success': True,
+                'message': 'Le service digital-signage a été redémarré avec succès.'
+            })
+        else:
+            error_msg = restart_result.stderr.strip() or restart_result.stdout.strip()
+            print(f"❌ Échec du redémarrage: {error_msg}")
+
+            return jsonify({
+                'success': False,
+                'error': f'Erreur lors du redémarrage du service:\n{error_msg}'
+            }), 500
+
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            'success': False,
+            'error': 'Timeout lors du redémarrage du service.'
+        }), 500
+    except FileNotFoundError:
+        return jsonify({
+            'success': False,
+            'error': 'Commande sudo ou systemctl introuvable. Vérifiez votre installation.'
+        }), 500
+    except Exception as e:
+        print(f"❌ Erreur lors du redémarrage: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Erreur inattendue: {str(e)}'
+        }), 500
+
 @socketio.on('register_screen')
 def handle_register_screen(data):
     """Enregistre un nouvel écran"""

@@ -832,20 +832,29 @@
                 menuItem.innerHTML = '⏳ Mise à jour...';
                 menuItem.style.pointerEvents = 'none';
 
-                fetch('/update-screen', {
+                fetch('/api/apply-update', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ screen_id: screenId })
+                    body: JSON.stringify({})
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(`✅ Mise à jour réussie !\n\n${data.message}`);
-                        // Recharger l'écran après la mise à jour
-                        if (screen && screen.status === 'online') {
-                            socket.emit('reload_screen', { screen_id: screenId });
+                        let message = `✅ Mise à jour réussie !\n\nCommit: ${data.commit_hash || 'N/A'}`;
+                        if (data.files_copied) {
+                            message += '\nFichiers copiés vers /opt/digital-signage';
+                        }
+
+                        // Proposer de redémarrer le service
+                        if (confirm(`${message}\n\n🔄 Voulez-vous redémarrer le service digital-signage maintenant ?\n\nCela appliquera les modifications et rechargera tous les écrans.`)) {
+                            restartService(screenId);
+                        } else {
+                            // Juste recharger l'écran si pas de redémarrage
+                            if (screen && screen.status === 'online') {
+                                socket.emit('reload_screen', { screen_id: screenId });
+                            }
                         }
                     } else {
                         alert(`❌ Erreur lors de la mise à jour :\n\n${data.error}`);
@@ -865,6 +874,33 @@
 
             // Fermer le menu
             document.getElementById(`screen-menu-${screenId}`).classList.remove('active');
+        }
+
+        function restartService(screenId) {
+            const screen = screens[screenId];
+
+            fetch('/restart-service', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`✅ Redémarrage du service lancé !\n\n${data.message}\n\nLe service va redémarrer dans quelques secondes.\nVous serez déconnecté puis reconnecté automatiquement.`);
+
+                    // Attendre quelques secondes puis recharger la page du manager
+                    setTimeout(() => {
+                        location.reload();
+                    }, 5000);
+                } else {
+                    alert(`❌ Erreur lors du redémarrage du service :\n\n${data.error}\n\nVous pouvez redémarrer manuellement avec :\nsudo systemctl restart digital-signage.service`);
+                }
+            })
+            .catch(error => {
+                alert(`❌ Erreur de connexion :\n\n${error.message}`);
+            });
         }
 
         // Fermer les menus en cliquant ailleurs
