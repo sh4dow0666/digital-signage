@@ -823,61 +823,7 @@
             document.getElementById(`screen-menu-${screenId}`).classList.remove('active');
         }
 
-        function updateScreenCode(screenId) {
-            const screen = screens[screenId];
-            if (confirm(`Mettre à jour l'écran "${screen.name}" ?\n\nCela effectuera une mise à jour du code (git pull) et rechargera l'écran.\n\n⚠️ Cette action peut prendre quelques secondes.`)) {
-                // Afficher un indicateur de chargement
-                const menuItem = event.target;
-                const originalText = menuItem.innerHTML;
-                menuItem.innerHTML = '⏳ Mise à jour...';
-                menuItem.style.pointerEvents = 'none';
-
-                fetch('/api/apply-update', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({})
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        let message = `✅ Mise à jour réussie !\n\nCommit: ${data.commit_hash || 'N/A'}`;
-                        if (data.files_copied) {
-                            message += '\nFichiers copiés vers /opt/digital-signage';
-                        }
-
-                        // Proposer de redémarrer le service
-                        if (confirm(`${message}\n\n🔄 Voulez-vous redémarrer le service digital-signage maintenant ?\n\nCela appliquera les modifications et rechargera tous les écrans.`)) {
-                            restartService(screenId);
-                        } else {
-                            // Juste recharger l'écran si pas de redémarrage
-                            if (screen && screen.status === 'online') {
-                                socket.emit('reload_screen', { screen_id: screenId });
-                            }
-                        }
-                    } else {
-                        alert(`❌ Erreur lors de la mise à jour :\n\n${data.error}`);
-                    }
-                })
-                .catch(error => {
-                    alert(`❌ Erreur de connexion :\n\n${error.message}`);
-                })
-                .finally(() => {
-                    // Restaurer le bouton
-                    if (menuItem) {
-                        menuItem.innerHTML = originalText;
-                        menuItem.style.pointerEvents = 'auto';
-                    }
-                });
-            }
-
-            // Fermer le menu
-            document.getElementById(`screen-menu-${screenId}`).classList.remove('active');
-        }
-
-        function restartService(screenId) {
-            const screen = screens[screenId];
+        function restartService() {
 
             fetch('/restart-service', {
                 method: 'POST',
@@ -1604,6 +1550,11 @@
                         document.getElementById('update-remote-info').style.display = 'none';
                         document.getElementById('update-uptodate-info').style.display = 'block';
                         applyBtn.style.display = 'none';
+
+                        // Proposer de redémarrer le service
+                        if (confirm(`${message}\n\n🔄 Voulez-vous redémarrer le service digital-signage maintenant ?`)) {
+                            restartService();
+                        }
                     } else {
                         errorMessage.textContent = data.error || 'Erreur inconnue lors de l\'installation';
                         errorContainer.style.display = 'block';
