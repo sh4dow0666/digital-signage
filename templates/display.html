@@ -142,6 +142,11 @@
             console.log('❌ Déconnecté du serveur');
         });
 
+        socket.on('reload_page', () => {
+            console.log('🔄 Rechargement de la page demandé par le serveur');
+            location.reload();
+        });
+
         socket.on('state_update', (data) => {
             //console.log("📢 Mise à jour de l'état reçue:", data);
             screensPlaylists = data.playlists;

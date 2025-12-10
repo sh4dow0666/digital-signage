@@ -701,6 +701,14 @@ def handle_clear_screen(data):
             'schedules': schedules
         }, broadcast=True)
 
+@socketio.on('reload_screen')
+def handle_reload_screen(data):
+    """Force le rechargement d'un écran"""
+    screen_id = data.get('screen_id')
+    if screen_id in screens and screens[screen_id]['status'] == 'online':
+        emit('reload_page', room=screens[screen_id]['sid'])
+        print(f"🔄 Rechargement demandé pour l'écran {screen_id}")
+
 @socketio.on('bulk_display')
 def handle_bulk_display(data):
     """Affiche plusieurs contenus sur plusieurs écrans"""

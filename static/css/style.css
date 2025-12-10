@@ -363,3 +363,77 @@ input:focus, select:focus, textarea:focus {
     color: #6c757d;
     border: 1px solid #d6d8db;
 }
+
+/* Menu contextuel écran */
+.screen-menu-btn {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: white;
+    color: black;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: all 0.2s ease;
+}
+
+.screen-menu-btn:hover {
+    background: #f8f9fa;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transform: scale(1.05);
+}
+
+.screen-context-menu {
+    position: absolute;
+    top: 25px;
+    right: -10px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    min-width: 160px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+}
+
+.screen-context-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.screen-context-menu .menu-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    font-size: 0.95em;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.screen-context-menu .menu-item:last-child {
+    border-bottom: none;
+}
+
+.screen-context-menu .menu-item:hover {
+    background: #f8f9fa;
+}
+
+.screen-context-menu .menu-item:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.screen-context-menu .menu-item:last-child {
+    border-radius: 0 0 8px 8px;
+}

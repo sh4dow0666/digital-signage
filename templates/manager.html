@@ -518,9 +518,23 @@
                 card.innerHTML = `
                     <div style="position: relative;">
                         <div class="screen-name" title="${screen.name}">${truncateText(screen.name, 20)}</div>
-                        <button onclick="openDebugModal('${id}')" style="position: absolute; top: -10px; right: -10px; background: #667eea; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" title="Debug">
-                            🐛
+                        <button onclick="toggleScreenMenu(event, '${id}')" class="screen-menu-btn" title="Options">
+                            ⋮
                         </button>
+                        <div id="screen-menu-${id}" class="screen-context-menu">
+                            <div class="menu-item" onclick="updateScreen('${id}')">
+                                🔄 Mettre à jour
+                            </div>
+                            <div class="menu-item" onclick="closeScreenMenu('${id}'); openDebugModal('${id}')">
+                                🐛 Debug
+                            </div>
+                            <div class="menu-item" onclick="closeScreenMenu('${id}'); openScreenConfig('${id}')">
+                                ⚙️ Configurer
+                            </div>
+                            <div class="menu-item" onclick="closeScreenMenu('${id}'); openScheduler('${id}')">
+                                📅 Planning
+                            </div>
+                        </div>
                     </div>
                     <span class="screen-status status-${screen.status}">
                         ${screen.status === 'online' ? '🟢 En ligne' : '🔴 Hors ligne'}
@@ -543,10 +557,6 @@
                             </span>
                         `}
                     </div>
-                    ${screen.status === 'online' ? `
-                        <button class="btn" onclick="openScreenConfig('${id}')" style="margin-top: 5px;">⚙️ Configurer</button>
-                        <button class="btn" onclick="openScheduler('${id}')" style="margin-top: 5px;">📅 Planning</button>
-                    ` : ''}
                 `;
                 container.appendChild(card);
             }
@@ -784,6 +794,53 @@
                 socket.emit('delete_playlist', { playlist_id: playlistId });
             }
         }
+
+        // MENU CONTEXTUEL ÉCRAN
+
+        function toggleScreenMenu(event, screenId) {
+            event.stopPropagation();
+
+            // Fermer tous les autres menus
+            document.querySelectorAll('.screen-context-menu').forEach(menu => {
+                if (menu.id !== `screen-menu-${screenId}`) {
+                    menu.classList.remove('active');
+                }
+            });
+
+            // Toggle le menu actuel
+            const menu = document.getElementById(`screen-menu-${screenId}`);
+            menu.classList.toggle('active');
+        }
+
+        function closeScreenMenu(screenId) {
+            const menu = document.getElementById(`screen-menu-${screenId}`);
+            if (menu) {
+                menu.classList.remove('active');
+            }
+        }
+
+        function updateScreen(screenId) {
+            const screen = screens[screenId];
+            if (screen && screen.status === 'online') {
+                if (confirm(`Recharger l'écran "${screen.name}" ?\n\nCela forcera le rechargement de la page sur l'écran distant.`)) {
+                    socket.emit('reload_screen', { screen_id: screenId });
+                }
+            } else {
+                alert('L\'écran doit être en ligne pour être rechargé.');
+            }
+
+            // Fermer le menu
+            document.getElementById(`screen-menu-${screenId}`).classList.remove('active');
+        }
+
+        // Fermer les menus en cliquant ailleurs
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.screen-menu-btn')) {
+                document.querySelectorAll('.screen-context-menu').forEach(menu => {
+                    menu.classList.remove('active');
+                });
+            }
+        });
 
         // CONFIGURATION ÉCRAN
 
