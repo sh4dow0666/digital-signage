@@ -19,7 +19,7 @@ app.config['SECRET_KEY'] = 'votre-cle-secrete-ici'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Version de l'application
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 
 # Fichiers de sauvegarde
 DATA_DIR = 'data'

@@ -510,6 +510,14 @@
 
         function updateScreens() {
             const container = document.getElementById('screens-container');
+
+            // Sauvegarder quel menu est ouvert avant de tout recréer
+            let openMenuId = null;
+            const openMenu = document.querySelector('.screen-context-menu.active');
+            if (openMenu) {
+                openMenuId = openMenu.id.replace('screen-menu-', '');
+            }
+
             container.innerHTML = '';
 
             for (const [id, screen] of Object.entries(screens)) {
@@ -559,6 +567,14 @@
                     </div>
                 `;
                 container.appendChild(card);
+            }
+
+            // Restaurer le menu ouvert si il y en avait un
+            if (openMenuId) {
+                const menuToReopen = document.getElementById(`screen-menu-${openMenuId}`);
+                if (menuToReopen) {
+                    menuToReopen.classList.add('active');
+                }
             }
         }
 
