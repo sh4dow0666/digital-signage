@@ -43,7 +43,7 @@ __INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/sed -i * /etc/default/hostapd
 __INSTALL_USER__ ALL=(ALL) NOPASSWD: /usr/bin/tee /proc/sys/net/ipv4/ip_forward
 __INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/sed -i * /etc/default/hostapd
 
-# Commandes pour gérer le service digital-signage.service
+# Commandes pour le service digital-signage.service
 __INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl start digital-signage.service
 __INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl stop digital-signage.service
 __INSTALL_USER__ ALL=(ALL) NOPASSWD: /bin/systemctl restart digital-signage.service
