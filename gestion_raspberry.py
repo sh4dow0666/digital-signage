@@ -574,6 +574,48 @@ def restart_service():
             'error': f'Erreur inattendue: {str(e)}'
         }), 500
 
+@app.route('/stop-service', methods=['POST'])
+def stop_service():
+    """Arrête le service digital-signage après un délai"""
+    import threading
+    import time
+
+    def delayed_stop():
+        """Fonction exécutée en arrière-plan pour arrêter le service"""
+        time.sleep(2)  # Attendre 2 secondes pour que la réponse HTTP soit envoyée
+        print("🛑 Arrêt du service digital-signage...")
+
+        try:
+            subprocess.run(
+                ['sudo', 'systemctl', 'stop', 'digital-signage.service'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            print("✅ Service arrêté")
+        except Exception as e:
+            print(f"❌ Erreur lors de l'arrêt: {str(e)}")
+
+    try:
+        print("🛑 Arrêt du service programmé dans 2 secondes...")
+
+        # Lancer l'arrêt dans un thread séparé
+        stop_thread = threading.Thread(target=delayed_stop, daemon=True)
+        stop_thread.start()
+
+        # Retourner immédiatement la réponse au client
+        return jsonify({
+            'success': True,
+            'message': 'L\'arrêt du service sera effectué dans 2 secondes.'
+        })
+
+    except Exception as e:
+        print(f"❌ Erreur lors de la programmation de l'arrêt: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Erreur inattendue: {str(e)}'
+        }), 500
+
 @socketio.on('register_screen')
 def handle_register_screen(data):
     """Enregistre un nouvel écran"""

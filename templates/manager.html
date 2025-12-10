@@ -20,6 +20,19 @@
                 <button onclick="openSettingsModal()" style="background: #667eea; color: white; border: none; border-radius: 8px; padding: 10px 20px; cursor: pointer; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;" title="Paramètres">
                     ⚙️ Paramètres
                 </button>
+                <div style="position: relative;">
+                    <button onclick="togglePowerMenu(event)" class="power-menu-btn" title="Alimentation">
+                        <i class="fa-solid fa-power-off"></i>
+                    </button>
+                    <div id="power-menu" class="power-menu">
+                        <div class="power-menu-item" onclick="restartServiceFromMenu()">
+                            <i class="fa-solid fa-rotate-right"></i> Redémarrer le service
+                        </div>
+                        <div class="power-menu-item" onclick="stopServiceFromMenu()">
+                            <i class="fa-solid fa-stop"></i> Arrêter le service
+                        </div>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -863,7 +876,57 @@
                     menu.classList.remove('active');
                 });
             }
+            if (!event.target.closest('.power-menu-btn') && !event.target.closest('.power-menu')) {
+                document.getElementById('power-menu')?.classList.remove('active');
+            }
         });
+
+        // MENU POWER
+
+        function togglePowerMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('power-menu');
+            menu.classList.toggle('active');
+        }
+
+        function restartServiceFromMenu() {
+            document.getElementById('power-menu').classList.remove('active');
+
+            if (confirm('🔄 Redémarrer le service digital-signage ?\n\nTous les écrans seront momentanément déconnectés puis reconnectés.')) {
+                restartService();
+            }
+        }
+
+        function stopServiceFromMenu() {
+            document.getElementById('power-menu').classList.remove('active');
+
+            if (confirm('⚠️ ATTENTION : Arrêter le service digital-signage ?\n\nTous les écrans seront déconnectés et le service devra être redémarré manuellement.\n\nÊtes-vous sûr de vouloir continuer ?')) {
+                stopService();
+            }
+        }
+
+        function stopService() {
+            fetch('/stop-service', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`🛑 Service arrêté !\n\n${data.message}\n\nPour redémarrer le service :\nsudo systemctl start digital-signage.service`);
+
+                    // Afficher un message permanent car le service est arrêté
+                    document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 24px; color: #dc3545;">🛑 Service arrêté<br><br>Pour redémarrer : sudo systemctl start digital-signage.service</div>';
+                } else {
+                    alert(`❌ Erreur lors de l'arrêt du service :\n\n${data.error}\n\nVous pouvez arrêter manuellement avec :\nsudo systemctl stop digital-signage.service`);
+                }
+            })
+            .catch(error => {
+                alert(`❌ Erreur de connexion :\n\n${error.message}`);
+            });
+        }
 
         // CONFIGURATION ÉCRAN
 
