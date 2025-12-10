@@ -394,14 +394,13 @@ input:focus, select:focus, textarea:focus {
 
 /* Menu power */
 .power-menu-btn {
-    background: #dc3545;
+    background: none;
     color: white;
     border: none;
     border-radius: 8px;
     padding: 10px 20px;
     cursor: pointer;
-    font-size: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    font-size: 20px;
     display: flex;
     align-items: center;
     gap: 8px;
