@@ -18,9 +18,6 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'votre-cle-secrete-ici'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Version de l'application
-APP_VERSION = "1.0.1"
-
 # Fichiers de sauvegarde
 DATA_DIR = 'data'
 SCREENS_FILE = os.path.join(DATA_DIR, 'screens.json')
@@ -66,9 +63,7 @@ def load_data():
                         'status': 'offline',
                         'current_content': None,
                         'last_seen': None,
-                        'sid': None,
-                        'client_version': screen_data.get('client_version', 'unknown'),
-                        'version_status': 'unknown'
+                        'sid': None
                     }
             print(f"✅ {len(screens)} écran(s) chargé(s)")
         except Exception as e:
@@ -114,8 +109,7 @@ def save_screens():
                 'name': screen_data['name'],
                 'location': screen_data['location'],
                 'default_content_id': screen_data.get('default_content_id', None),
-                'idle_behavior': screen_data.get('idle_behavior', 'show_default'),
-                'client_version': screen_data.get('client_version', 'unknown')
+                'idle_behavior': screen_data.get('idle_behavior', 'show_default')
             }
 
         with open(SCREENS_FILE, 'w', encoding='utf-8') as f:
@@ -154,67 +148,6 @@ def manager():
 def display():
     """Page d'affichage pour les Raspberry Pi"""
     return render_template("display.html")
-
-@app.route('/update-screen', methods=['POST'])
-def update_screen():
-    """Effectue une mise à jour du code (git pull)"""
-    try:
-        data = request.get_json()
-        screen_id = data.get('screen_id')
-
-        print(f"🔄 Mise à jour demandée pour l'écran {screen_id}")
-
-        # Vérifier si on est dans un dépôt git
-        result = subprocess.run(
-            ['git', 'rev-parse', '--is-inside-work-tree'],
-            capture_output=True,
-            text=True,
-            cwd=os.path.dirname(os.path.abspath(__file__))
-        )
-
-        if result.returncode != 0:
-            return jsonify({
-                'success': False,
-                'error': 'Ce projet n\'est pas dans un dépôt Git.'
-            }), 400
-
-        # Effectuer le git pull
-        pull_result = subprocess.run(
-            ['git', 'pull'],
-            capture_output=True,
-            text=True,
-            cwd=os.path.dirname(os.path.abspath(__file__)),
-            timeout=30
-        )
-
-        if pull_result.returncode == 0:
-            output = pull_result.stdout.strip()
-            print(f"✅ Git pull réussi: {output}")
-
-            return jsonify({
-                'success': True,
-                'message': f'Code mis à jour avec succès.\n\nGit output:\n{output}'
-            })
-        else:
-            error_msg = pull_result.stderr.strip() or pull_result.stdout.strip()
-            print(f"❌ Git pull échoué: {error_msg}")
-
-            return jsonify({
-                'success': False,
-                'error': f'Erreur Git:\n{error_msg}'
-            }), 500
-
-    except subprocess.TimeoutExpired:
-        return jsonify({
-            'success': False,
-            'error': 'Le git pull a pris trop de temps (timeout).'
-        }), 500
-    except Exception as e:
-        print(f"❌ Erreur lors de la mise à jour: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Erreur inattendue: {str(e)}'
-        }), 500
 
 @app.route('/api/youtube-metadata/<video_id>')
 def get_youtube_metadata(video_id):
@@ -603,15 +536,11 @@ def apply_update():
 def handle_register_screen(data):
     """Enregistre un nouvel écran"""
     screen_id = data.get('screen_id')
-    client_version = data.get('client_version', 'unknown')
-    version_status = 'current' if client_version == APP_VERSION else 'outdated'
 
     if screen_id in screens:
         screens[screen_id]['status'] = 'online'
         screens[screen_id]['sid'] = request.sid
         screens[screen_id]['last_seen'] = datetime.now().strftime('%H:%M:%S')
-        screens[screen_id]['client_version'] = client_version
-        screens[screen_id]['version_status'] = version_status
     else:
         screens[screen_id] = {
             'id': screen_id,
@@ -622,9 +551,7 @@ def handle_register_screen(data):
             'status': 'online',
             'current_content': None,
             'last_seen': datetime.now().strftime('%H:%M:%S'),
-            'sid': request.sid,
-            'client_version': client_version,
-            'version_status': version_status
+            'sid': request.sid
         }
         save_screens()
 
@@ -633,8 +560,7 @@ def handle_register_screen(data):
         'screens': screens,
         'content': content_library,
         'playlists': playlists,
-        'schedules': schedules,
-        'server_version': APP_VERSION
+        'schedules': schedules
     }, broadcast=True)
     
     # Envoyer les playlists et contenus à l'écran qui vient de se connecter

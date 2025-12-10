@@ -192,15 +192,6 @@
                             </div>
                         </div>
 
-                        <div style="margin-bottom: 15px;">
-                            <strong style="color: #667eea;">🔄 Version</strong>
-                            <div style="margin-top: 8px; line-height: 1.8;">
-                                <div>💻 Version client: <span id="debug-client-version">--</span></div>
-                                <div>🖥️ Version serveur: <span id="debug-server-version">--</span></div>
-                                <div>✓ État: <span id="debug-version-status">--</span></div>
-                            </div>
-                        </div>
-
                         <div>
                             <strong style="color: #667eea;">📅 Planning actif</strong>
                             <div id="debug-schedule" style="margin-top: 8px; line-height: 1.8;">
@@ -380,7 +371,6 @@
         let contentLibrary = [];
         let playlists = {};
         let schedules = {};
-        let serverVersion = '1.0.0';
         let editingPlaylist = [];
         let editingScheduleEntry = null; // {screenId, index} quand on édite une entrée
 
@@ -488,7 +478,6 @@
             contentLibrary = data.content;
             playlists = data.playlists || {};
             schedules = data.schedules || {};
-            serverVersion = data.server_version || '1.0.0';
             updateUI();
         });
 
@@ -530,9 +519,6 @@
                             ⋮
                         </button>
                         <div id="screen-menu-${id}" class="screen-context-menu">
-                            <div class="menu-item" onclick="updateScreenCode('${id}')">
-                                📥 Mettre à jour
-                            </div>
                             <div class="menu-item" onclick="refreshScreen('${id}')">
                                 🔄 Rafraîchir
                             </div>
@@ -553,21 +539,6 @@
                     <div class="screen-info" title="${screen.location}">📍 ${truncateText(screen.location, 20)}</div>
                     <div class="screen-info" title="${screen.current_playlist || 'Aucune en cours'}">📋 Playlist: ${truncateText(screen.current_playlist || 'Aucune en cours', 15)}</div>
                     <div class="screen-info" title="${screen.current_content || 'Aucun en cours'}">🎬 Contenu: ${truncateText(screen.current_content || 'Aucun en cours', 15)}</div>
-                    <div class="version-badge-container">
-                        ${screen.version_status === 'outdated' ? `
-                            <span class="version-badge outdated" title="Version ${screen.client_version || 'inconnue'} - Mise à jour disponible">
-                                🔄 v${screen.client_version || '?'} (obsolète)
-                            </span>
-                        ` : screen.version_status === 'current' ? `
-                            <span class="version-badge current" title="Version ${screen.client_version || 'inconnue'} - À jour">
-                                ✓ v${screen.client_version || '?'}
-                            </span>
-                        ` : `
-                            <span class="version-badge unknown" title="Version inconnue">
-                                ? v${screen.client_version || '?'}
-                            </span>
-                        `}
-                    </div>
                 `;
                 container.appendChild(card);
             }
@@ -1384,19 +1355,6 @@
             const debugSocketIdElement = document.getElementById('debug-socket-id');
             debugSocketIdElement.textContent = screen.sid ? screen.sid.substring(0, 12) + '...' : '--';
             debugSocketIdElement.title = screen.sid || '--';
-
-            // Version
-            document.getElementById('debug-client-version').textContent = screen.client_version || 'inconnue';
-            document.getElementById('debug-server-version').textContent = serverVersion || 'inconnue';
-
-            const versionStatusText = screen.version_status === 'current' ? '✓ À jour' :
-                                     screen.version_status === 'outdated' ? '⚠️ Mise à jour disponible' :
-                                     '? Inconnue';
-            const versionStatusElement = document.getElementById('debug-version-status');
-            versionStatusElement.textContent = versionStatusText;
-            versionStatusElement.style.color = screen.version_status === 'current' ? '#28a745' :
-                                               screen.version_status === 'outdated' ? '#ffc107' :
-                                               '#6c757d';
 
             // Planning
             const scheduleContainer = document.getElementById('debug-schedule');
