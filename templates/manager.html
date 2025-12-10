@@ -26,10 +26,10 @@
                     </button>
                     <div id="power-menu" class="power-menu">
                         <div class="power-menu-item" onclick="restartServiceFromMenu()">
-                            <i class="fa-solid fa-rotate-right"></i> Redémarrer le service
+                            <i class="fa-solid fa-rotate-right" style="color:rgb(21, 126, 212)"></i> Redémarrer
                         </div>
                         <div class="power-menu-item" onclick="stopServiceFromMenu()">
-                            <i class="fa-solid fa-stop"></i> Arrêter le service
+                            <i class="fa-solid fa-stop" style="color:red"></i> Arrêter
                         </div>
                     </div>
                 </div>
@@ -892,21 +892,21 @@
         function restartServiceFromMenu() {
             document.getElementById('power-menu').classList.remove('active');
 
-            if (confirm('🔄 Redémarrer le service digital-signage ?\n\nTous les écrans seront momentanément déconnectés puis reconnectés.')) {
-                restartService();
+            if (confirm('🔄 Redémarrer le système ?\n\nTous les écrans seront momentanément déconnectés puis reconnectés.')) {
+                restartSystem();
             }
         }
 
         function stopServiceFromMenu() {
             document.getElementById('power-menu').classList.remove('active');
 
-            if (confirm('⚠️ ATTENTION : Arrêter le service digital-signage ?\n\nTous les écrans seront déconnectés et le service devra être redémarré manuellement.\n\nÊtes-vous sûr de vouloir continuer ?')) {
-                stopService();
+            if (confirm('⚠️ ATTENTION : Arrêter le système ?\n\nÊtes-vous sûr de vouloir continuer ?')) {
+                stopSystem();
             }
         }
 
-        function stopService() {
-            fetch('/stop-service', {
+        function stopSystem() {
+            fetch('/stop-system', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -915,12 +915,42 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert(`🛑 Service arrêté !\n\n${data.message}\n\nPour redémarrer le service :\nsudo systemctl start digital-signage.service`);
-
-                    // Afficher un message permanent car le service est arrêté
-                    document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 24px; color: #dc3545;">🛑 Service arrêté<br><br>Pour redémarrer : sudo systemctl start digital-signage.service</div>';
+                    // Afficher un message permanent car le système est arrêté
+                    document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 24px; color: #dc3545;">🛑 Le système est en cours d\'arrêt</div>';
                 } else {
-                    alert(`❌ Erreur lors de l'arrêt du service :\n\n${data.error}\n\nVous pouvez arrêter manuellement avec :\nsudo systemctl stop digital-signage.service`);
+                    alert(`❌ Erreur lors de l'arrêt du système :\n\n${data.error}`);
+                }
+            })
+            .catch(error => {
+                alert(`❌ Erreur de connexion :\n\n${error.message}`);
+            });
+        }
+
+        function restartSystem() {
+            fetch('/restart-system', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // alert(`✅ Redémarrage programmé !\n\n${data.message}\n\nLa page se rechargera automatiquement dans 6 secondes.`);
+                    // affiche une notification non bloquante
+                    const notification = document.createElement('div');
+                    notification.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #28a745; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 1000;';
+                    notification.textContent = `✅ Redémarrage programmé ! La page se rechargera automatiquement dans 6 secondes.`;
+                    document.body.appendChild(notification);
+
+                    // Attendre 6 secondes pour laisser le temps au service de redémarrer
+                    // (2s délai + 3-4s pour le redémarrage du service)
+                    setTimeout(() => {
+                        notification.remove();
+                        location.reload();
+                    }, 6000);
+                } else {
+                    alert(`❌ Erreur lors du redémarrage du système :\n\n${data.error}`);
                 }
             })
             .catch(error => {

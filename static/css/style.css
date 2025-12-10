@@ -445,6 +445,7 @@ input:focus, select:focus, textarea:focus {
     display: flex;
     align-items: center;
     gap: 10px;
+    color: #333;
 }
 
 .power-menu-item:last-child {
@@ -461,7 +462,6 @@ input:focus, select:focus, textarea:focus {
 
 .power-menu-item:last-child {
     border-radius: 0 0 8px 8px;
-    color: #dc3545;
 }
 
 .power-menu-item:last-child:hover {

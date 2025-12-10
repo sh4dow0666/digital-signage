@@ -616,6 +616,88 @@ def stop_service():
             'error': f'Erreur inattendue: {str(e)}'
         }), 500
 
+@app.route('/restart-system', methods=['POST'])
+def restart_system():
+    """Redémarre le système après un délai"""
+    import threading
+    import time
+
+    def delayed_restart():
+        """Fonction exécutée en arrière-plan pour redémarrer le système"""
+        time.sleep(2)  # Attendre 2 secondes pour que la réponse HTTP soit envoyée
+        print("🔄 Redémarrage du système...")
+
+        try:
+            subprocess.run(
+                ['sudo', 'reboot'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+        except Exception as e:
+            print(f"❌ Erreur lors du redémarrage du système: {str(e)}")
+
+    try:
+        print("🔄 Redémarrage du système programmé dans 2 secondes...")
+
+        # Lancer le redémarrage dans un thread séparé
+        restart_thread = threading.Thread(target=delayed_restart, daemon=True)
+        restart_thread.start()
+
+        # Retourner immédiatement la réponse au client
+        return jsonify({
+            'success': True,
+            'message': 'Le redémarrage du système sera effectué dans 2 secondes.'
+        })
+
+    except Exception as e:
+        print(f"❌ Erreur lors de la programmation du redémarrage du système: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Erreur inattendue: {str(e)}'
+        }), 500
+    
+app.route('/stop-system', methods=['POST'])
+def stop_system():
+    """Arrête le système après un délai"""
+    import threading
+    import time
+
+    def delayed_shutdown():
+        """Fonction exécutée en arrière-plan pour arrêter le système"""
+        time.sleep(2)  # Attendre 2 secondes pour que la réponse HTTP soit envoyée
+        print("🛑 Arrêt du système...")
+
+        try:
+            subprocess.run(
+                ['sudo', 'shutdown', 'now'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+        except Exception as e:
+            print(f"❌ Erreur lors de l'arrêt du système: {str(e)}")
+
+    try:
+        print("🛑 Arrêt du système programmé dans 2 secondes...")
+
+        # Lancer l'arrêt dans un thread séparé
+        shutdown_thread = threading.Thread(target=delayed_shutdown, daemon=True)
+        shutdown_thread.start()
+
+        # Retourner immédiatement la réponse au client
+        return jsonify({
+            'success': True,
+            'message': 'L\'arrêt du système sera effectué dans 2 secondes.'
+        })
+
+    except Exception as e:
+        print(f"❌ Erreur lors de la programmation de l'arrêt du système: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Erreur inattendue: {str(e)}'
+        }), 500
+
 @socketio.on('register_screen')
 def handle_register_screen(data):
     """Enregistre un nouvel écran"""
