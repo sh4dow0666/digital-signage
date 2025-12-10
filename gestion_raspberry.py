@@ -4,8 +4,9 @@ Interface web pour contrôler plusieurs écrans à distance
 VERSION CORRIGÉE - Playlists fonctionnelles
 """
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit
+from werkzeug.utils import secure_filename
 import json
 import os
 from datetime import datetime
@@ -16,6 +17,7 @@ import subprocess
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'votre-cle-secrete-ici'
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB max file size
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Fichiers de sauvegarde
@@ -25,8 +27,17 @@ CONTENT_FILE = os.path.join(DATA_DIR, 'content.json')
 PLAYLISTS_FILE = os.path.join(DATA_DIR, 'playlists.json')
 SCHEDULES_FILE = os.path.join(DATA_DIR, 'schedules.json')
 
-# Créer le dossier data s'il n'existe pas
+# Dossier pour les uploads
+UPLOAD_DIR = os.path.join('static', 'uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg'}
+
+# Créer les dossiers s'ils n'existent pas
 os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+def allowed_file(filename):
+    """Vérifie si l'extension du fichier est autorisée"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Stockage en mémoire
 screens = {}
@@ -148,6 +159,58 @@ def manager():
 def display():
     """Page d'affichage pour les Raspberry Pi"""
     return render_template("display.html")
+
+@app.route('/api/upload-image', methods=['POST'])
+def upload_image():
+    """Upload une image et retourne l'URL"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'Aucun fichier fourni'
+            }), 400
+
+        file = request.files['file']
+
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'error': 'Nom de fichier vide'
+            }), 400
+
+        if not allowed_file(file.filename):
+            return jsonify({
+                'success': False,
+                'error': f'Type de fichier non autorisé. Extensions autorisées: {", ".join(ALLOWED_EXTENSIONS)}'
+            }), 400
+
+        # Créer un nom de fichier unique avec timestamp
+        filename = secure_filename(file.filename)
+        name, ext = os.path.splitext(filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        unique_filename = f"{name}_{timestamp}{ext}"
+
+        # Sauvegarder le fichier
+        filepath = os.path.join(UPLOAD_DIR, unique_filename)
+        file.save(filepath)
+
+        # Retourner l'URL relative
+        url = f"/static/uploads/{unique_filename}"
+
+        print(f"✅ Image uploadée: {unique_filename}")
+
+        return jsonify({
+            'success': True,
+            'url': url,
+            'filename': unique_filename
+        })
+
+    except Exception as e:
+        print(f"❌ Erreur lors de l'upload: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Erreur lors de l\'upload: {str(e)}'
+        }), 500
 
 @app.route('/api/youtube-metadata/<video_id>')
 def get_youtube_metadata(video_id):

@@ -104,20 +104,31 @@
                     </div>
                     <div class="form-group">
                         <label>Type</label>
-                        <select id="content-type">
+                        <select id="content-type" onchange="toggleImageUpload()">
                             <option value="url">Page Web (URL)</option>
                             <option value="video">Vidéo (URL)</option>
-                            <option value="image">Image (URL)</option>
+                            <option value="image">Image (URL ou Upload)</option>
                             <option value="youtube">YouTube</option>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" id="url-group">
                         <label>URL / Lien</label>
                         <input type="text" id="content-url" placeholder="https://..." onblur="handleYoutubeUrl()">
                         <div id="youtube-loading" style="display: none; color: #667eea; margin-top: 8px; font-size: 0.9em;">
                             🔄 Récupération des métadonnées YouTube...
                         </div>
                         <div id="youtube-error" style="display: none; color: #dc3545; margin-top: 8px; font-size: 0.9em;"></div>
+                    </div>
+                    <div class="form-group" id="image-upload-group" style="display: none;">
+                        <label>📁 Upload d'image</label>
+                        <input type="file" id="image-file" accept="image/*" onchange="handleImageUpload()">
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            Formats acceptés: PNG, JPG, JPEG, GIF, BMP, WEBP, SVG (max 50 MB)
+                        </p>
+                        <div id="upload-status" style="margin-top: 8px; font-size: 0.9em;"></div>
+                        <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; display: none;" id="image-or-separator">
+                            <strong>OU</strong> entrez une URL ci-dessus
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Durée d'affichage (obligatoire)</label>
@@ -1225,6 +1236,12 @@
             document.getElementById('youtube-loading').style.display = 'none';
             document.getElementById('youtube-error').style.display = 'none';
             document.getElementById('duration-error').style.display = 'none';
+            // Réinitialiser l'upload d'image
+            uploadedImageUrl = null;
+            document.getElementById('image-file').value = '';
+            document.getElementById('upload-status').innerHTML = '';
+            document.getElementById('image-upload-group').style.display = 'none';
+            document.getElementById('image-or-separator').style.display = 'none';
         }
 
         function validateDuration() {
@@ -1306,16 +1323,85 @@
             }
         }
 
+        let uploadedImageUrl = null;
+
+        function toggleImageUpload() {
+            const type = document.getElementById('content-type').value;
+            const urlGroup = document.getElementById('url-group');
+            const uploadGroup = document.getElementById('image-upload-group');
+            const orSeparator = document.getElementById('image-or-separator');
+
+            if (type === 'image') {
+                uploadGroup.style.display = 'block';
+                orSeparator.style.display = 'block';
+            } else {
+                uploadGroup.style.display = 'none';
+                orSeparator.style.display = 'none';
+                uploadedImageUrl = null;
+                document.getElementById('image-file').value = '';
+                document.getElementById('upload-status').innerHTML = '';
+            }
+        }
+
+        async function handleImageUpload() {
+            const fileInput = document.getElementById('image-file');
+            const file = fileInput.files[0];
+            const statusDiv = document.getElementById('upload-status');
+
+            if (!file) {
+                return;
+            }
+
+            statusDiv.innerHTML = '<span style="color: #667eea;">⏳ Upload en cours...</span>';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/upload-image', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    uploadedImageUrl = data.url;
+                    statusDiv.innerHTML = `<span style="color: #28a745;">✅ Image uploadée: ${data.filename}</span>`;
+
+                    // Pré-remplir le nom si vide
+                    const nameInput = document.getElementById('content-name');
+                    if (!nameInput.value) {
+                        nameInput.value = data.filename.split('_')[0];
+                    }
+
+                    // Effacer l'URL si elle était remplie
+                    document.getElementById('content-url').value = '';
+                } else {
+                    statusDiv.innerHTML = `<span style="color: #dc3545;">❌ Erreur: ${data.error}</span>`;
+                    uploadedImageUrl = null;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<span style="color: #dc3545;">❌ Erreur de connexion: ${error.message}</span>`;
+                uploadedImageUrl = null;
+            }
+        }
+
         function saveContent() {
             const contentId = document.getElementById('content-id').value;
             const name = document.getElementById('content-name').value;
             const type = document.getElementById('content-type').value;
-            const url = document.getElementById('content-url').value;
+            let url = document.getElementById('content-url').value;
             const durationInput = document.getElementById('content-duration').value;
             const duration = hmsToSeconds(durationInput);
 
+            // Si c'est une image et qu'une image a été uploadée, utiliser l'URL uploadée
+            if (type === 'image' && uploadedImageUrl) {
+                url = uploadedImageUrl;
+            }
+
             if (!name || !url) {
-                alert('Veuillez remplir tous les champs');
+                alert('Veuillez remplir tous les champs (nom et URL ou fichier)');
                 return;
             }
 

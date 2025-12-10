@@ -512,3 +512,11 @@ input:focus, select:focus, textarea:focus {
 .screen-context-menu .menu-item:last-child {
     border-radius: 0 0 8px 8px;
 }
+
+/* Playlist */
+.playlist-preview{
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px;
+    background: #fafafa;
+}
