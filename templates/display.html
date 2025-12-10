@@ -29,6 +29,7 @@
         const socket = io();
         const screenId = new URLSearchParams(window.location.search).get('id');
         const screenName = new URLSearchParams(window.location.search).get('name') || 'Écran ' + screenId;
+        const CLIENT_VERSION = "1.0.0";
         let playlistInterval = null;
         let currentPlaylistIndex = 0;
         let currentPlaylist = [];
@@ -127,7 +128,8 @@
             socket.emit('register_screen', {
                 screen_id: screenId,
                 name: screenName,
-                location: new URLSearchParams(window.location.search).get('location') || 'Non défini'
+                location: new URLSearchParams(window.location.search).get('location') || 'Non défini',
+                client_version: CLIENT_VERSION
             });
             console.log('✅ Connecté au serveur avec ID:', screenId);
         });

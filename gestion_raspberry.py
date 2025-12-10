@@ -18,6 +18,9 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'votre-cle-secrete-ici'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+# Version de l'application
+APP_VERSION = "1.0.0"
+
 # Fichiers de sauvegarde
 DATA_DIR = 'data'
 SCREENS_FILE = os.path.join(DATA_DIR, 'screens.json')
@@ -63,7 +66,9 @@ def load_data():
                         'status': 'offline',
                         'current_content': None,
                         'last_seen': None,
-                        'sid': None
+                        'sid': None,
+                        'client_version': screen_data.get('client_version', 'unknown'),
+                        'version_status': 'unknown'
                     }
             print(f"✅ {len(screens)} écran(s) chargé(s)")
         except Exception as e:
@@ -109,7 +114,8 @@ def save_screens():
                 'name': screen_data['name'],
                 'location': screen_data['location'],
                 'default_content_id': screen_data.get('default_content_id', None),
-                'idle_behavior': screen_data.get('idle_behavior', 'show_default')
+                'idle_behavior': screen_data.get('idle_behavior', 'show_default'),
+                'client_version': screen_data.get('client_version', 'unknown')
             }
 
         with open(SCREENS_FILE, 'w', encoding='utf-8') as f:
@@ -536,11 +542,15 @@ def apply_update():
 def handle_register_screen(data):
     """Enregistre un nouvel écran"""
     screen_id = data.get('screen_id')
-    
+    client_version = data.get('client_version', 'unknown')
+    version_status = 'current' if client_version == APP_VERSION else 'outdated'
+
     if screen_id in screens:
         screens[screen_id]['status'] = 'online'
         screens[screen_id]['sid'] = request.sid
         screens[screen_id]['last_seen'] = datetime.now().strftime('%H:%M:%S')
+        screens[screen_id]['client_version'] = client_version
+        screens[screen_id]['version_status'] = version_status
     else:
         screens[screen_id] = {
             'id': screen_id,
@@ -551,16 +561,19 @@ def handle_register_screen(data):
             'status': 'online',
             'current_content': None,
             'last_seen': datetime.now().strftime('%H:%M:%S'),
-            'sid': request.sid
+            'sid': request.sid,
+            'client_version': client_version,
+            'version_status': version_status
         }
         save_screens()
-    
+
     # Envoyer l'état complet à tous les clients
     emit('state_update', {
         'screens': screens,
         'content': content_library,
         'playlists': playlists,
-        'schedules': schedules
+        'schedules': schedules,
+        'server_version': APP_VERSION
     }, broadcast=True)
     
     # Envoyer les playlists et contenus à l'écran qui vient de se connecter
