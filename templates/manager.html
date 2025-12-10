@@ -20,6 +20,8 @@
                 <button onclick="openSettingsModal()" style="background: #667eea; color: white; border: none; border-radius: 8px; padding: 10px 20px; cursor: pointer; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;" title="Paramètres">
                     ⚙️ Paramètres
                 </button>
+            </div>
+            <div style="position: absolute; top: 20px; left: 20px; display: flex; gap: 10px; align-items: flex-start; flex-direction: column;">
                 <div style="position: relative;">
                     <button onclick="togglePowerMenu(event)" class="power-menu-btn" title="Alimentation">
                         <i class="fa-solid fa-power-off"></i>
@@ -29,7 +31,7 @@
                             <i class="fa-solid fa-rotate-right" style="color:rgb(21, 126, 212)"></i> Redémarrer
                         </div>
                         <div class="power-menu-item" onclick="stopServiceFromMenu()">
-                            <i class="fa-solid fa-stop" style="color:red"></i> Arrêter
+                            <i class="fa-solid fa-stop" style="color:red; padding: 0 2px;"></i> Arrêter
                         </div>
                     </div>
                 </div>
