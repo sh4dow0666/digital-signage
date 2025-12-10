@@ -1562,6 +1562,7 @@
                         if (confirm(`🔄 Voulez-vous redémarrer le service digital-signage maintenant ?`)) {
                             restartService();
                         }
+                        closeUpdateModal();
                     } else {
                         errorMessage.textContent = data.error || 'Erreur inconnue lors de l\'installation';
                         errorContainer.style.display = 'block';
