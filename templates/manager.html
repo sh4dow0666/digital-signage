@@ -536,7 +536,7 @@
                     <span class="screen-status status-${screen.status}">
                         ${screen.status === 'online' ? '🟢 En ligne' : '🔴 Hors ligne'}
                     </span>
-                    <div class="screen-info" title="${screen.location}"><i class="fa-solid fa-location-dot" style="color:red; padding: 0 4px;"></i> ${truncateText(screen.location, 20)}</div>
+                    <div class="screen-info" title="${screen.location}"><i class="fa-solid fa-location-dot" style="color:red; padding: 0 4px;"></i> Emplacement: ${truncateText(screen.location, 20)}</div>
                     <div class="screen-info" title="${screen.current_playlist || 'Aucune en cours'}">📋 Playlist: ${truncateText(screen.current_playlist || 'Aucune en cours', 15)}</div>
                     <div class="screen-info" title="${screen.current_content || 'Aucun en cours'}">🎬 Contenu: ${truncateText(screen.current_content || 'Aucun en cours', 15)}</div>
                 `;
