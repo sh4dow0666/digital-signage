@@ -534,45 +534,41 @@ def apply_update():
 
 @app.route('/restart-service', methods=['POST'])
 def restart_service():
-    """Redémarre le service digital-signage"""
+    """Redémarre le service digital-signage après un délai"""
+    import threading
+    import time
+
+    def delayed_restart():
+        """Fonction exécutée en arrière-plan pour redémarrer le service"""
+        time.sleep(2)  # Attendre 2 secondes pour que la réponse HTTP soit envoyée
+        print("🔄 Redémarrage du service digital-signage...")
+
+        try:
+            subprocess.run(
+                ['sudo', 'systemctl', 'restart', 'digital-signage.service'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            print("✅ Service redémarré")
+        except Exception as e:
+            print(f"❌ Erreur lors du redémarrage: {str(e)}")
+
     try:
-        print("🔄 Redémarrage du service digital-signage demandé...")
+        print("🔄 Redémarrage du service programmé dans 2 secondes...")
 
-        # Essayer de redémarrer le service avec sudo
-        restart_result = subprocess.run(
-            ['sudo', 'systemctl', 'restart', 'digital-signage.service'],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
+        # Lancer le redémarrage dans un thread séparé
+        restart_thread = threading.Thread(target=delayed_restart, daemon=True)
+        restart_thread.start()
 
-        if restart_result.returncode == 0:
-            print("✅ Service redémarré avec succès")
-            return jsonify({
-                'success': True,
-                'message': 'Le service digital-signage a été redémarré avec succès.'
-            })
-        else:
-            error_msg = restart_result.stderr.strip() or restart_result.stdout.strip()
-            print(f"❌ Échec du redémarrage: {error_msg}")
-
-            return jsonify({
-                'success': False,
-                'error': f'Erreur lors du redémarrage du service:\n{error_msg}'
-            }), 500
-
-    except subprocess.TimeoutExpired:
+        # Retourner immédiatement la réponse au client
         return jsonify({
-            'success': False,
-            'error': 'Timeout lors du redémarrage du service.'
-        }), 500
-    except FileNotFoundError:
-        return jsonify({
-            'success': False,
-            'error': 'Commande sudo ou systemctl introuvable. Vérifiez votre installation.'
-        }), 500
+            'success': True,
+            'message': 'Le redémarrage du service sera effectué dans 2 secondes.'
+        })
+
     except Exception as e:
-        print(f"❌ Erreur lors du redémarrage: {str(e)}")
+        print(f"❌ Erreur lors de la programmation du redémarrage: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Erreur inattendue: {str(e)}'

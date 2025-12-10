@@ -834,12 +834,13 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert(`✅ Redémarrage du service lancé !\n\n${data.message}\n\nLe service va redémarrer dans quelques secondes.\nVous serez déconnecté puis reconnecté automatiquement.`);
+                    alert(`✅ Redémarrage programmé !\n\n${data.message}\n\nLa page se rechargera automatiquement dans 6 secondes.`);
 
-                    // Attendre quelques secondes puis recharger la page du manager
+                    // Attendre 6 secondes pour laisser le temps au service de redémarrer
+                    // (2s délai + 3-4s pour le redémarrage du service)
                     setTimeout(() => {
                         location.reload();
-                    }, 5000);
+                    }, 6000);
                 } else {
                     alert(`❌ Erreur lors du redémarrage du service :\n\n${data.error}\n\nVous pouvez redémarrer manuellement avec :\nsudo systemctl restart digital-signage.service`);
                 }
