@@ -176,6 +176,17 @@
                         </p>
                     </div>
 
+                    <h3 style="color: #667eea; margin-bottom: 15px; margin-top: 30px;">Options d'affichage</h3>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="config-show-clock" style="width: 20px; height: 20px; cursor: pointer;">
+                            <span>🕐 Afficher l'heure en bas à droite</span>
+                        </label>
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            Affiche l'heure actuelle en temps réel dans le coin inférieur droit de l'écran
+                        </p>
+                    </div>
+
                     <button class="btn" onclick="saveScreenConfig()">💾 Sauvegarder la Configuration</button>
                 </div>
             </div>
@@ -993,6 +1004,9 @@
             // Définir le comportement actuel
             document.getElementById('config-idle-behavior').value = screen.idle_behavior || 'show_default';
 
+            // Définir l'option d'affichage de l'heure
+            document.getElementById('config-show-clock').checked = screen.show_clock || false;
+
             document.getElementById('screen-config-modal').classList.add('active');
             document.body.classList.add('modal-open');
         }
@@ -1006,11 +1020,13 @@
             const screenId = document.getElementById('config-screen-id').value;
             const defaultContentId = document.getElementById('config-default-content').value || null;
             const idleBehavior = document.getElementById('config-idle-behavior').value;
+            const showClock = document.getElementById('config-show-clock').checked;
 
             socket.emit('update_screen_config', {
                 screen_id: screenId,
                 default_content_id: defaultContentId,
-                idle_behavior: idleBehavior
+                idle_behavior: idleBehavior,
+                show_clock: showClock
             });
 
             closeScreenConfigModal();

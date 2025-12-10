@@ -71,6 +71,7 @@ def load_data():
                         'location': screen_data.get('location', 'Non défini'),
                         'default_content_id': screen_data.get('default_content_id', None),
                         'idle_behavior': screen_data.get('idle_behavior', 'show_default'),
+                        'show_clock': screen_data.get('show_clock', False),
                         'status': 'offline',
                         'current_content': None,
                         'last_seen': None,
@@ -120,7 +121,8 @@ def save_screens():
                 'name': screen_data['name'],
                 'location': screen_data['location'],
                 'default_content_id': screen_data.get('default_content_id', None),
-                'idle_behavior': screen_data.get('idle_behavior', 'show_default')
+                'idle_behavior': screen_data.get('idle_behavior', 'show_default'),
+                'show_clock': screen_data.get('show_clock', False)
             }
 
         with open(SCREENS_FILE, 'w', encoding='utf-8') as f:
@@ -777,6 +779,7 @@ def handle_register_screen(data):
             'location': data.get('location', 'Non défini'),
             'default_content_id': None,
             'idle_behavior': 'show_default',
+            'show_clock': False,
             'status': 'online',
             'current_content': None,
             'last_seen': datetime.now().strftime('%H:%M:%S'),
@@ -814,7 +817,8 @@ def handle_register_screen(data):
     emit('config_updated', {
         'screen_id': screen_id,
         'default_content_id': screens[screen_id].get('default_content_id', None),
-        'idle_behavior': screens[screen_id].get('idle_behavior', 'show_default')
+        'idle_behavior': screens[screen_id].get('idle_behavior', 'show_default'),
+        'show_clock': screens[screen_id].get('show_clock', False)
     }, room=request.sid)
 
 @socketio.on('get_state')
@@ -1064,6 +1068,7 @@ def handle_update_screen_config(data):
     if screen_id in screens:
         screens[screen_id]['default_content_id'] = data.get('default_content_id', None)
         screens[screen_id]['idle_behavior'] = data.get('idle_behavior', 'show_default')
+        screens[screen_id]['show_clock'] = data.get('show_clock', False)
         save_screens()
 
         # Envoyer la config mise à jour à l'écran concerné
@@ -1071,7 +1076,8 @@ def handle_update_screen_config(data):
             emit('config_updated', {
                 'screen_id': screen_id,
                 'default_content_id': screens[screen_id]['default_content_id'],
-                'idle_behavior': screens[screen_id]['idle_behavior']
+                'idle_behavior': screens[screen_id]['idle_behavior'],
+                'show_clock': screens[screen_id]['show_clock']
             }, room=screens[screen_id]['sid'])
 
         # Mettre à jour tous les gestionnaires

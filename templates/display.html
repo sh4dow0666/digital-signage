@@ -25,6 +25,8 @@
         <div class="waiting">En attente de contenu...</div>
     </div>
 
+    <div id="clock-display" style="display: none;"></div>
+
     <script>
         const socket = io();
         const screenId = new URLSearchParams(window.location.search).get('id');
@@ -42,6 +44,41 @@
         let currentContentDuration = 0; // Durée du contenu actuel
         let currentContentName = null; // Nom du contenu actuel (pour affichage)
         let currentPlaylistName = null; // Nom de la playlist active
+        let showClock = false; // Affichage de l'horloge
+        let clockInterval = null; // Intervalle de mise à jour de l'horloge
+
+        // Fonction pour mettre à jour l'horloge
+        function updateClock() {
+            if (!showClock) return;
+
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+
+            const clockElement = document.getElementById('clock-display');
+            clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        // Fonction pour démarrer/arrêter l'horloge
+        function toggleClock(show) {
+            showClock = show;
+            const clockElement = document.getElementById('clock-display');
+
+            if (show) {
+                clockElement.style.display = 'block';
+                updateClock(); // Mise à jour immédiate
+                if (!clockInterval) {
+                    clockInterval = setInterval(updateClock, 1000);
+                }
+            } else {
+                clockElement.style.display = 'none';
+                if (clockInterval) {
+                    clearInterval(clockInterval);
+                    clockInterval = null;
+                }
+            }
+        }
 
         // Fonction pour basculer le panneau de debug
         function toggleDebugPanel() {
@@ -186,7 +223,13 @@
             if (data.screen_id === screenId) {
                 defaultContentId = data.default_content_id;
                 idleBehavior = data.idle_behavior || 'show_default';
-                console.log('⚙️ Configuration mise à jour:', { defaultContentId, idleBehavior });
+
+                // Gérer l'affichage de l'horloge
+                if (data.show_clock !== undefined) {
+                    toggleClock(data.show_clock);
+                }
+
+                console.log('⚙️ Configuration mise à jour:', { defaultContentId, idleBehavior, showClock: data.show_clock });
 
                 // Si aucune playlist planifiée n'est active, forcer l'affichage du contenu par défaut
                 if (activeScheduledPlaylistId === null) {
