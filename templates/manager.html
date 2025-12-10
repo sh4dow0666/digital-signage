@@ -187,7 +187,7 @@
                             <strong style="color: #667eea;">🌐 Réseau</strong>
                             <div style="margin-top: 8px; line-height: 1.8;">
                                 <div>🆔 ID Écran: <span id="debug-screen-id">--</span></div>
-                                <div>📍 Emplacement: <span id="debug-location">--</span></div>
+                                <div><i class="fa-solid fa-location-dot" style="color:red"></i> Emplacement: <span id="debug-location">--</span></div>
                                 <div>🔗 Socket ID: <span id="debug-socket-id">--</span></div>
                             </div>
                         </div>
@@ -536,7 +536,7 @@
                     <span class="screen-status status-${screen.status}">
                         ${screen.status === 'online' ? '🟢 En ligne' : '🔴 Hors ligne'}
                     </span>
-                    <div class="screen-info" title="${screen.location}">📍 ${truncateText(screen.location, 20)}</div>
+                    <div class="screen-info" title="${screen.location}"><i class="fa-solid fa-location-dot" style="color:red"></i> ${truncateText(screen.location, 20)}</div>
                     <div class="screen-info" title="${screen.current_playlist || 'Aucune en cours'}">📋 Playlist: ${truncateText(screen.current_playlist || 'Aucune en cours', 15)}</div>
                     <div class="screen-info" title="${screen.current_content || 'Aucun en cours'}">🎬 Contenu: ${truncateText(screen.current_content || 'Aucun en cours', 15)}</div>
                 `;
