@@ -155,6 +155,67 @@ def display():
     """Page d'affichage pour les Raspberry Pi"""
     return render_template("display.html")
 
+@app.route('/update-screen', methods=['POST'])
+def update_screen():
+    """Effectue une mise à jour du code (git pull)"""
+    try:
+        data = request.get_json()
+        screen_id = data.get('screen_id')
+
+        print(f"🔄 Mise à jour demandée pour l'écran {screen_id}")
+
+        # Vérifier si on est dans un dépôt git
+        result = subprocess.run(
+            ['git', 'rev-parse', '--is-inside-work-tree'],
+            capture_output=True,
+            text=True,
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        )
+
+        if result.returncode != 0:
+            return jsonify({
+                'success': False,
+                'error': 'Ce projet n\'est pas dans un dépôt Git.'
+            }), 400
+
+        # Effectuer le git pull
+        pull_result = subprocess.run(
+            ['git', 'pull'],
+            capture_output=True,
+            text=True,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            timeout=30
+        )
+
+        if pull_result.returncode == 0:
+            output = pull_result.stdout.strip()
+            print(f"✅ Git pull réussi: {output}")
+
+            return jsonify({
+                'success': True,
+                'message': f'Code mis à jour avec succès.\n\nGit output:\n{output}'
+            })
+        else:
+            error_msg = pull_result.stderr.strip() or pull_result.stdout.strip()
+            print(f"❌ Git pull échoué: {error_msg}")
+
+            return jsonify({
+                'success': False,
+                'error': f'Erreur Git:\n{error_msg}'
+            }), 500
+
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            'success': False,
+            'error': 'Le git pull a pris trop de temps (timeout).'
+        }), 500
+    except Exception as e:
+        print(f"❌ Erreur lors de la mise à jour: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Erreur inattendue: {str(e)}'
+        }), 500
+
 @app.route('/api/youtube-metadata/<video_id>')
 def get_youtube_metadata(video_id):
     """Récupère les métadonnées d'une vidéo YouTube"""

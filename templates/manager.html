@@ -530,8 +530,11 @@
                             ⋮
                         </button>
                         <div id="screen-menu-${id}" class="screen-context-menu">
-                            <div class="menu-item" onclick="updateScreen('${id}')">
-                                🔄 Mettre à jour
+                            <div class="menu-item" onclick="updateScreenCode('${id}')">
+                                📥 Mettre à jour
+                            </div>
+                            <div class="menu-item" onclick="refreshScreen('${id}')">
+                                🔄 Rafraîchir
                             </div>
                             <div class="menu-item" onclick="closeScreenMenu('${id}'); openDebugModal('${id}')">
                                 🐛 Debug
@@ -835,14 +838,58 @@
             }
         }
 
-        function updateScreen(screenId) {
+        function refreshScreen(screenId) {
             const screen = screens[screenId];
             if (screen && screen.status === 'online') {
-                if (confirm(`Recharger l'écran "${screen.name}" ?\n\nCela forcera le rechargement de la page sur l'écran distant.`)) {
+                if (confirm(`Rafraîchir l'écran "${screen.name}" ?\n\nCela rechargera la page sur l'écran distant.`)) {
                     socket.emit('reload_screen', { screen_id: screenId });
                 }
             } else {
-                alert('L\'écran doit être en ligne pour être rechargé.');
+                alert('L\'écran doit être en ligne pour être rafraîchi.');
+            }
+
+            // Fermer le menu
+            document.getElementById(`screen-menu-${screenId}`).classList.remove('active');
+        }
+
+        function updateScreenCode(screenId) {
+            const screen = screens[screenId];
+            if (confirm(`Mettre à jour l'écran "${screen.name}" ?\n\nCela effectuera une mise à jour du code (git pull) et rechargera l'écran.\n\n⚠️ Cette action peut prendre quelques secondes.`)) {
+                // Afficher un indicateur de chargement
+                const menuItem = event.target;
+                const originalText = menuItem.innerHTML;
+                menuItem.innerHTML = '⏳ Mise à jour...';
+                menuItem.style.pointerEvents = 'none';
+
+                fetch('/update-screen', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ screen_id: screenId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`✅ Mise à jour réussie !\n\n${data.message}`);
+                        // Recharger l'écran après la mise à jour
+                        if (screen && screen.status === 'online') {
+                            socket.emit('reload_screen', { screen_id: screenId });
+                        }
+                    } else {
+                        alert(`❌ Erreur lors de la mise à jour :\n\n${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    alert(`❌ Erreur de connexion :\n\n${error.message}`);
+                })
+                .finally(() => {
+                    // Restaurer le bouton
+                    if (menuItem) {
+                        menuItem.innerHTML = originalText;
+                        menuItem.style.pointerEvents = 'auto';
+                    }
+                });
             }
 
             // Fermer le menu
