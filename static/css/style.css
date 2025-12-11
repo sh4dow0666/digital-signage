@@ -520,3 +520,21 @@ input:focus, select:focus, textarea:focus {
     padding: 10px;
     background: #fafafa;
 }
+
+/* Drag and Drop pour les playlists */
+.playlist-item {
+    user-select: none;
+}
+
+.playlist-item.dragging {
+    opacity: 0.4;
+}
+
+.playlist-item.drag-over {
+    border-top: 3px solid #667eea !important;
+    margin-top: 5px;
+}
+
+.playlist-item:active {
+    cursor: grabbing !important;
+}

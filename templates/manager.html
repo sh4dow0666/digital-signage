@@ -748,6 +748,71 @@
             updateEditPlaylistPreview();
         }
 
+        // Variables pour le drag and drop
+        let draggedElement = null;
+        let draggedIndex = null;
+
+        function handleDragStart(e) {
+            draggedElement = e.currentTarget;
+            draggedIndex = parseInt(draggedElement.dataset.index);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', draggedElement.innerHTML);
+            draggedElement.style.opacity = '0.4';
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            if (e.currentTarget.classList.contains('playlist-item')) {
+                e.currentTarget.style.borderTop = '3px solid #667eea';
+            }
+        }
+
+        function handleDragLeave(e) {
+            if (e.currentTarget.classList.contains('playlist-item')) {
+                e.currentTarget.style.borderTop = '';
+            }
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            if (draggedElement !== e.currentTarget) {
+                const dropIndex = parseInt(e.currentTarget.dataset.index);
+
+                // Réorganiser le tableau editingPlaylist
+                const draggedItem = editingPlaylist[draggedIndex];
+                editingPlaylist.splice(draggedIndex, 1);
+                editingPlaylist.splice(dropIndex, 0, draggedItem);
+
+                // Rafraîchir l'affichage
+                updateEditPlaylistPreview();
+            }
+
+            e.currentTarget.style.borderTop = '';
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            draggedElement.style.opacity = '1';
+
+            // Nettoyer tous les styles de bordure
+            document.querySelectorAll('.playlist-item').forEach(item => {
+                item.style.borderTop = '';
+            });
+
+            draggedElement = null;
+            draggedIndex = null;
+        }
+
         function updateEditPlaylistPreview() {
             const container = document.getElementById('edit-playlist-items');
 
@@ -763,17 +828,31 @@
                 totalDuration += item.duration;
                 const div = document.createElement('div');
                 div.className = 'playlist-item';
-                div.style.cssText = 'background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #667eea;';
+                div.draggable = true;
+                div.dataset.index = index;
+                div.style.cssText = 'background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #667eea; cursor: move; transition: all 0.2s;';
                 div.innerHTML = `
-                    <div style="flex: 1;">
-                        <strong title="${item.content.name}">${index + 1}. ${item.content.name}</strong>
-                        <span class="content-type">${getContentTypeText(item.content.type)}</span>
-                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
-                            ⏱️ ${secondsToHMS(item.duration)}
+                    <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.2em; color: #999; cursor: grab;">☰</span>
+                        <div style="flex: 1;">
+                            <strong title="${item.content.name}">${index + 1}. ${item.content.name}</strong>
+                            <span class="content-type">${getContentTypeText(item.content.type)}</span>
+                            <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                                ⏱️ ${secondsToHMS(item.duration)}
+                            </div>
                         </div>
                     </div>
                     <button class="btn btn-danger" onclick="removeFromEditPlaylist(${index})" style="width: auto; padding: 8px 20px;">🗑️</button>
                 `;
+
+                // Événements de drag and drop
+                div.addEventListener('dragstart', handleDragStart);
+                div.addEventListener('dragover', handleDragOver);
+                div.addEventListener('drop', handleDrop);
+                div.addEventListener('dragend', handleDragEnd);
+                div.addEventListener('dragenter', handleDragEnter);
+                div.addEventListener('dragleave', handleDragLeave);
+
                 container.appendChild(div);
             });
 
