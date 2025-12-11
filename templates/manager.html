@@ -1113,6 +1113,92 @@
 
         // PLANIFICATEUR
 
+        // Variables pour le drag and drop du planning
+        let draggedScheduleElement = null;
+        let draggedScheduleIndex = null;
+
+        function handleScheduleDragStart(e) {
+            draggedScheduleElement = e.currentTarget;
+            draggedScheduleIndex = parseInt(draggedScheduleElement.dataset.index);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', draggedScheduleElement.innerHTML);
+            draggedScheduleElement.style.opacity = '0.4';
+        }
+
+        function handleScheduleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleScheduleDragEnter(e) {
+            if (e.currentTarget.classList.contains('schedule-item')) {
+                e.currentTarget.style.borderTop = '3px solid #667eea';
+            }
+        }
+
+        function handleScheduleDragLeave(e) {
+            if (e.currentTarget.classList.contains('schedule-item')) {
+                e.currentTarget.style.borderTop = '';
+            }
+        }
+
+        function handleScheduleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            if (draggedScheduleElement !== e.currentTarget) {
+                const dropIndex = parseInt(e.currentTarget.dataset.index);
+                const screenId = document.getElementById('scheduler-screen-id').value;
+
+                // Récupérer les deux entrées du planning
+                const draggedEntry = schedules[screenId][draggedScheduleIndex];
+                const targetEntry = schedules[screenId][dropIndex];
+
+                // Échanger uniquement les plages horaires (start et end)
+                const tempStart = draggedEntry.start;
+                const tempEnd = draggedEntry.end;
+
+                draggedEntry.start = targetEntry.start;
+                draggedEntry.end = targetEntry.end;
+
+                targetEntry.start = tempStart;
+                targetEntry.end = tempEnd;
+
+                // Tri automatique par heure de début
+                schedules[screenId].sort((a, b) => {
+                    return a.start.localeCompare(b.start);
+                });
+
+                // Sauvegarder sur le serveur
+                socket.emit('update_schedule', {
+                    screen_id: screenId,
+                    schedule: schedules[screenId]
+                });
+
+                // Rafraîchir l'affichage
+                updateCurrentSchedule(screenId);
+            }
+
+            e.currentTarget.style.borderTop = '';
+            return false;
+        }
+
+        function handleScheduleDragEnd(e) {
+            draggedScheduleElement.style.opacity = '1';
+
+            // Nettoyer tous les styles de bordure
+            document.querySelectorAll('.schedule-item').forEach(item => {
+                item.style.borderTop = '';
+            });
+
+            draggedScheduleElement = null;
+            draggedScheduleIndex = null;
+        }
+
         function openScheduler(screenId) {
             document.getElementById('scheduler-screen-id').value = screenId;
             cancelScheduleEdit(); // Réinitialiser le mode édition
@@ -1160,9 +1246,13 @@
                 const playlist = playlists[entry.playlist_id];
                 const playlistNameFull = playlist ? playlist.name : 'Playlist supprimée';
                 const item = document.createElement('div');
-                item.style.cssText = 'background: white; padding: 8px 12px; margin-bottom: 6px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #667eea; font-size: 0.9em;';
+                item.className = 'schedule-item';
+                item.draggable = true;
+                item.dataset.index = index;
+                item.style.cssText = 'background: white; padding: 8px 12px; margin-bottom: 6px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #667eea; font-size: 0.9em; cursor: move; transition: all 0.2s;';
                 item.innerHTML = `
                     <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.1em; color: #999; cursor: grab;">☰</span>
                         <strong style="color: #333; flex-shrink: 0;">${entry.start} - ${entry.end}</strong>
                         <span style="color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help;" title="${playlistNameFull}">• ${playlistNameFull}</span>
                     </div>
@@ -1171,6 +1261,15 @@
                         <button class="btn btn-danger" onclick="removeScheduleEntry('${screenId}', ${index})" style="width: auto; padding: 4px 12px; font-size: 0.85em;">🗑️</button>
                     </div>
                 `;
+
+                // Événements de drag and drop
+                item.addEventListener('dragstart', handleScheduleDragStart);
+                item.addEventListener('dragover', handleScheduleDragOver);
+                item.addEventListener('drop', handleScheduleDrop);
+                item.addEventListener('dragend', handleScheduleDragEnd);
+                item.addEventListener('dragenter', handleScheduleDragEnter);
+                item.addEventListener('dragleave', handleScheduleDragLeave);
+
                 container.appendChild(item);
             });
         }

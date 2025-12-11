@@ -538,3 +538,21 @@ input:focus, select:focus, textarea:focus {
 .playlist-item:active {
     cursor: grabbing !important;
 }
+
+/* Drag and Drop pour le planning */
+.schedule-item {
+    user-select: none;
+}
+
+.schedule-item.dragging {
+    opacity: 0.4;
+}
+
+.schedule-item.drag-over {
+    border-top: 3px solid #667eea !important;
+    margin-top: 5px;
+}
+
+.schedule-item:active {
+    cursor: grabbing !important;
+}
