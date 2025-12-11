@@ -722,7 +722,7 @@ def restart_system():
             'error': f'Erreur inattendue: {str(e)}'
         }), 500
     
-app.route('/stop-system', methods=['POST'])
+@app.route('/stop-system', methods=['POST'])
 def stop_system():
     """Arrête le système après un délai"""
     import threading
