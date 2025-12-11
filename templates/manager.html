@@ -1383,7 +1383,7 @@
 
                 if (data.success) {
                     uploadedImageUrl = data.url;
-                    statusDiv.innerHTML = `<span style="color: #28a745;">✅ Image uploadée: <strong>${data.filename}</strong></span>`;
+                    statusDiv.innerHTML = `<span style="color: #28a745;">✅ Image uploadée: ${data.filename}></span>`;
 
                     // Pré-remplir le nom si vide
                     const nameInput = document.getElementById('content-name');
