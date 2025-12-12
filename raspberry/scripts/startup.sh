@@ -100,7 +100,7 @@ if [ "$CONFIGURED" = "false" ]; then
             --disable-restore-session-state \
             --password-store=basic \
             --start-maximized \
-            -disable-session-crashed-bubble \
+            --disable-session-crashed-bubble \
             --incognito \
             --disable-features=OverlayScrollbar \
             --window-size=${WIDTH},${HEIGHT} \
@@ -162,7 +162,7 @@ if [ "$ROLE_PLAYER" = "true" ]; then
         --disable-restore-session-state \
         --password-store=basic \
         --start-maximized \
-        -disable-session-crashed-bubble \
+        --disable-session-crashed-bubble \
         --incognito \
         --disable-features=OverlayScrollbar \
         --window-size=${WIDTH},${HEIGHT} \
@@ -185,7 +185,7 @@ if [ "$ROLE_PLAYER" = "true" ]; then
         --disable-restore-session-state \
         --password-store=basic \
         --start-maximized \
-        -disable-session-crashed-bubble \
+        --disable-session-crashed-bubble \
         --incognito \
         --disable-features=OverlayScrollbar \
         --window-size=${WIDTH},${HEIGHT} \

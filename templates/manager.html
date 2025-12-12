@@ -11,7 +11,7 @@
 <body>
     <div class="container">
         <header style="position: relative;">
-            <h1>🖥️ gestionnaire d'Affichage Multi-Écrans</h1>
+            <h1>🖥️ Gestionnaire d'Affichage Multi-Écrans</h1>
             <p class="subtitle">Contrôlez tous vos écrans depuis une seule interface</p>
             <div style="position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; align-items: flex-end; flex-direction: column;">
                 <button id="update-badge" onclick="openUpdateModal()" style="display: none; background: #28a745; color: white; border: none; border-radius: 8px; padding: 10px 20px; cursor: pointer; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); gap: 8px; align-items: center;" title="Mise à jour disponible">
@@ -939,39 +939,6 @@
             document.getElementById(`screen-menu-${screenId}`).classList.remove('active');
         }
 
-        function restartService() {
-
-            fetch('/restart-service', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // alert(`✅ Redémarrage programmé !\n\n${data.message}\n\nLa page se rechargera automatiquement dans 6 secondes.`);
-                    // affiche une notification non bloquante
-                    const notification = document.createElement('div');
-                    notification.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #28a745; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 1000;';
-                    notification.textContent = `✅ Redémarrage programmé ! La page se rechargera automatiquement dans 6 secondes.`;
-                    document.body.appendChild(notification);
-
-                    // Attendre 6 secondes pour laisser le temps au service de redémarrer
-                    // (2s délai + 3-4s pour le redémarrage du service)
-                    setTimeout(() => {
-                        notification.remove();
-                        location.reload();
-                    }, 6000);
-                } else {
-                    alert(`❌ Erreur lors du redémarrage du service :\n\n${data.error}\n\nVous pouvez redémarrer manuellement avec :\nsudo systemctl restart digital-signage.service`);
-                }
-            })
-            .catch(error => {
-                alert(`❌ Erreur de connexion :\n\n${error.message}`);
-            });
-        }
-
         // Fermer les menus en cliquant ailleurs
         document.addEventListener('click', function(event) {
             if (!event.target.closest('.screen-menu-btn')) {
@@ -1019,7 +986,7 @@
             .then(data => {
                 if (data.success) {
                     // Afficher un message permanent car le système est arrêté
-                    document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 24px; color: #dc3545;">🛑 Le système est en cours d\'arrêt</div>';
+                    document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 24px; color: #dc3545; background: black;">🛑 Le système est en cours d\'arrêt</div>';
                 } else {
                     alert(`❌ Erreur lors de l'arrêt du système :\n\n${data.error}`);
                 }
@@ -1039,19 +1006,8 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // alert(`✅ Redémarrage programmé !\n\n${data.message}\n\nLa page se rechargera automatiquement dans 6 secondes.`);
-                    // affiche une notification non bloquante
-                    const notification = document.createElement('div');
-                    notification.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #28a745; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 1000;';
-                    notification.textContent = `✅ Redémarrage programmé ! La page se rechargera automatiquement dans 6 secondes.`;
-                    document.body.appendChild(notification);
-
-                    // Attendre 6 secondes pour laisser le temps au service de redémarrer
-                    // (2s délai + 3-4s pour le redémarrage du service)
-                    setTimeout(() => {
-                        notification.remove();
-                        location.reload();
-                    }, 6000);
+                    // Afficher un message permanent
+                    document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 24px; color: #dc3545; background: black;">🛑 Le système est en cours de redémarrage...</div>';
                 } else {
                     alert(`❌ Erreur lors du redémarrage du système :\n\n${data.error}`);
                 }
@@ -1934,8 +1890,8 @@
                         applyBtn.style.display = 'none';
 
                         // Proposer de redémarrer le service
-                        if (confirm(`🔄 Voulez-vous redémarrer le service digital-signage maintenant ?`)) {
-                            restartService();
+                        if (confirm(`🔄 Voulez-vous redémarrer maintenant ?`)) {
+                            restartSystem();
                         }
                         closeUpdateModal();
                     } else {
