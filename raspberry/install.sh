@@ -48,6 +48,9 @@ EOF
     echo -e "${BLUE}   → Désactivation du screen blanking...${NC}"
     raspi-config nonint do_blanking 1 2>/dev/null || echo -e "${YELLOW}   ⚠️  Configuration screen blanking manuelle requise${NC}"
 
+    echo -e "${BLUE}   → Configuration du pays pour le wifi...${NC}"
+    raspi-config nonint do_wifi_country FR 2>/dev/null || echo -e "${YELLOW}   ⚠️  Configuration pays wifi manuelle requise${NC}"
+
     echo -e "${GREEN}   ✅ Configuration raspi-config terminée${NC}"
 else
     echo -e "${YELLOW}   ⚠️  raspi-config non disponible (pas sur Raspberry Pi ?)${NC}"
@@ -117,27 +120,6 @@ EOF
     chown $USER:$USER $INSTALL_DIR/raspberry/config/device.conf
 fi
 
-echo -e "${YELLOW}🔧 Configuration du service systemd...${NC}"
-cat > /etc/systemd/system/$SERVICE_NAME.service << EOF
-[Unit]
-Description=Digital Signage Service
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=$USER
-WorkingDirectory=$INSTALL_DIR
-ExecStart=$INSTALL_DIR/raspberry/scripts/startup.sh
-Restart=always
-RestartSec=10
-StandardOutput=append:$INSTALL_DIR/logs/service.log
-StandardError=append:$INSTALL_DIR/logs/service-error.log
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
 echo -e "${YELLOW}🖥️  Configuration du démarrage automatique en mode kiosk...${NC}"
 # Configuration de l'environnement graphique
 cat > /home/$USER/.xinitrc << 'EOF'
@@ -150,7 +132,7 @@ xset s noblank
 # cacher le curseur
 unclutter -idle 0.1 &
 
-systemctl start digital-signage.service
+/bin/bash /opt/digital-signage/raspberry/scripts/startup.sh
 EOF
 
 chmod +x /home/$USER/.xinitrc
@@ -167,10 +149,6 @@ chown -R $USER:$USER /home/$USER/.config
 echo -e "${YELLOW}🔐 Configuration des permissions...${NC}"
 chown -R $USER:$USER $INSTALL_DIR
 chmod -R 755 $INSTALL_DIR/raspberry/scripts
-
-echo -e "${YELLOW}🚀 Activation du service...${NC}"
-systemctl daemon-reload
-#systemctl enable $SERVICE_NAME.service
 
 echo -e "${YELLOW}📱 Installation du script de maintenance...${NC}"
 cp $INSTALL_DIR/raspberry/scripts/maintenance.sh /usr/local/bin/ds-maintenance

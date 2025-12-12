@@ -72,6 +72,8 @@ if [ "$CONFIGURED" = "false" ]; then
             --disable-features=OverlayScrollbar \
             --window-size=${WIDTH},${HEIGHT} \
             --start-fullscreen \
+            --disable-glsl-translator \
+            --disable-features=Translate \
             "http://$LOCAL_IP:$WIZARD_PORT" &
 
         # Attendre la fin du wizard
@@ -103,6 +105,8 @@ if [ "$CONFIGURED" = "false" ]; then
             --disable-features=OverlayScrollbar \
             --window-size=${WIDTH},${HEIGHT} \
             --start-fullscreen \
+            --disable-glsl-translator \
+            --disable-features=Translate \
             "http://192.168.4.1:$WIZARD_PORT" &
 
         # Attendre la fin du wizard
@@ -163,6 +167,8 @@ if [ "$ROLE_PLAYER" = "true" ]; then
         --disable-features=OverlayScrollbar \
         --window-size=${WIDTH},${HEIGHT} \
         --start-fullscreen \
+        --disable-glsl-translator \
+        --disable-features=Translate \
         "file://$BASE_DIR/raspberry/wizard/screen_info.html?id=${SCREEN_ID_ENCODED}&name=${SCREEN_NAME_ENCODED}&location=${SCREEN_LOCATION_ENCODED}&controller=${CONTROLLER_URL}" &
 
     sleep 10
@@ -184,6 +190,8 @@ if [ "$ROLE_PLAYER" = "true" ]; then
         --disable-features=OverlayScrollbar \
         --window-size=${WIDTH},${HEIGHT} \
         --start-fullscreen \
+        --disable-glsl-translator \
+        --disable-features=Translate \
         "$DISPLAY_URL" &
 
     echo "✅ Player démarré avec l'URL: $DISPLAY_URL"

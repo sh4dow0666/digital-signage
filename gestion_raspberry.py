@@ -603,6 +603,8 @@ def restart_service():
     import threading
     import time
 
+    my_PID = os.getpid()
+
     def delayed_restart():
         """Fonction exécutée en arrière-plan pour redémarrer le service"""
         time.sleep(2)  # Attendre 2 secondes pour que la réponse HTTP soit envoyée
@@ -610,7 +612,7 @@ def restart_service():
 
         try:
             subprocess.run(
-                ['sudo', 'systemctl', 'restart', 'digital-signage.service'],
+                ['sudo', '/bin/bash', '/opt/digital-signage/scripts/restart_service.sh', str(my_PID)],
                 capture_output=True,
                 text=True,
                 timeout=10
