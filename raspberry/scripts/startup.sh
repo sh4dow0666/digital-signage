@@ -167,7 +167,7 @@ if [ "$ROLE_PLAYER" = "true" ]; then
         --window-size=${WIDTH},${HEIGHT} \
         "file://$BASE_DIR/wizard/screen_info.html?id=${SCREEN_ID_ENCODED}&name=${SCREEN_NAME_ENCODED}&location=${SCREEN_LOCATION_ENCODED}&controller=${CONTROLLER_URL}" &
 
-    sleep 20
+    sleep 25
 
     # Tuer Chromium et relancer avec l'URL du display
     pkill -f chromium
