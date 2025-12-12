@@ -357,11 +357,61 @@
             </div>
         </div>
 
+        <!-- Modal Affichage Prioritaire -->
+        <div id="priority-display-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>⚡ Affichage Prioritaire</h2>
+                    <button class="close-modal" onclick="closePriorityDisplayModal()">&times;</button>
+                </div>
+                <div class="content-form">
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid #ffc107;">
+                        <strong style="color: #856404;">ℹ️ Information</strong>
+                        <div style="font-size: 0.9em; color: #856404; margin-top: 5px;">
+                            L'affichage prioritaire remplace temporairement le contenu en cours sur les écrans sélectionnés. Pour revenir au planning normal, utilisez le bouton "Effacer" sur chaque écran.
+                        </div>
+                    </div>
+
+                    <h3 style="color: #667eea; margin-bottom: 15px;">Type de contenu</h3>
+                    <div class="form-group">
+                        <label>Que souhaitez-vous afficher ?</label>
+                        <select id="priority-type" onchange="updatePriorityOptions()">
+                            <option value="">Choisir...</option>
+                            <option value="content">Un contenu unique</option>
+                            <option value="playlist">Une playlist</option>
+                        </select>
+                    </div>
+
+                    <div id="priority-content-group" class="form-group" style="display: none;">
+                        <label>Contenu à afficher</label>
+                        <select id="priority-content-select"></select>
+                    </div>
+
+                    <div id="priority-playlist-group" class="form-group" style="display: none;">
+                        <label>Playlist à afficher</label>
+                        <select id="priority-playlist-select"></select>
+                    </div>
+
+                    <h3 style="color: #667eea; margin-bottom: 15px; margin-top: 30px;">Sélection des écrans</h3>
+                    <div class="form-group">
+                        <div style="margin-bottom: 15px;">
+                            <button class="btn" onclick="selectAllScreens()" style="width: auto; padding: 8px 20px; margin-right: 10px;">✓ Tout sélectionner</button>
+                            <button class="btn" onclick="deselectAllScreens()" style="width: auto; padding: 8px 20px; background: #6c757d;">✗ Tout désélectionner</button>
+                        </div>
+                        <div id="priority-screens-selection" class="selection-grid"></div>
+                    </div>
+
+                    <button class="btn" onclick="sendPriorityDisplay()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">⚡ Afficher en priorité</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Reste du HTML identique... -->
         <div class="main-content">
             <div class="section" style="grid-column: 1 / -1;">
                 <div class="section-header">
                     <h2>📺 Écrans Connectés</h2>
+                    <button class="btn btn-header btn-priority" onclick="openPriorityDisplayModal()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">⚡ Affichage Prioritaire</button>
                 </div>
                 <div class="stats">
                     <div class="stat-card">
@@ -1932,6 +1982,154 @@
                     console.error('Erreur lors de la vérification automatique des mises à jour:', error);
                 });
             setTimeout(checkForUpdatesOnLoad, 60000); // Vérifier toutes les minutes
+        }
+
+        // AFFICHAGE PRIORITAIRE
+
+        function openPriorityDisplayModal() {
+            updatePriorityContentSelect();
+            updatePriorityPlaylistSelect();
+            updatePriorityScreensSelection();
+            document.getElementById('priority-type').value = '';
+            document.getElementById('priority-content-group').style.display = 'none';
+            document.getElementById('priority-playlist-group').style.display = 'none';
+            document.getElementById('priority-display-modal').classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+
+        function closePriorityDisplayModal() {
+            document.getElementById('priority-display-modal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+        }
+
+        function updatePriorityOptions() {
+            const type = document.getElementById('priority-type').value;
+            const contentGroup = document.getElementById('priority-content-group');
+            const playlistGroup = document.getElementById('priority-playlist-group');
+
+            if (type === 'content') {
+                contentGroup.style.display = 'block';
+                playlistGroup.style.display = 'none';
+            } else if (type === 'playlist') {
+                contentGroup.style.display = 'none';
+                playlistGroup.style.display = 'block';
+            } else {
+                contentGroup.style.display = 'none';
+                playlistGroup.style.display = 'none';
+            }
+        }
+
+        function updatePriorityContentSelect() {
+            const select = document.getElementById('priority-content-select');
+            select.innerHTML = '<option value="">Choisir un contenu...</option>';
+            contentLibrary.forEach(content => {
+                const option = document.createElement('option');
+                option.value = content.id;
+                option.textContent = `${truncateText(content.name, 30)} (${getContentTypeText(content.type)})`;
+                select.appendChild(option);
+            });
+        }
+
+        function updatePriorityPlaylistSelect() {
+            const select = document.getElementById('priority-playlist-select');
+            select.innerHTML = '<option value="">Choisir une playlist...</option>';
+            Object.values(playlists).forEach(playlist => {
+                const option = document.createElement('option');
+                option.value = playlist.id;
+                option.textContent = `${truncateText(playlist.name, 30)} (${playlist.items.length} contenus)`;
+                select.appendChild(option);
+            });
+        }
+
+        function updatePriorityScreensSelection() {
+            const container = document.getElementById('priority-screens-selection');
+            container.innerHTML = '';
+
+            const onlineScreens = Object.entries(screens).filter(([id, screen]) => screen.status === 'online');
+
+            if (onlineScreens.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Aucun écran en ligne</p>';
+                return;
+            }
+
+            onlineScreens.forEach(([id, screen]) => {
+                const item = document.createElement('div');
+                item.className = 'checkbox-item';
+                item.innerHTML = `
+                    <input type="checkbox" id="priority-screen-${id}" value="${id}">
+                    <label for="priority-screen-${id}">${truncateText(screen.name, 20)}</label>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function selectAllScreens() {
+            document.querySelectorAll('#priority-screens-selection input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+        }
+
+        function deselectAllScreens() {
+            document.querySelectorAll('#priority-screens-selection input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+
+        function sendPriorityDisplay() {
+            const type = document.getElementById('priority-type').value;
+            let contentId = null;
+            let playlistId = null;
+
+            if (type === 'content') {
+                contentId = document.getElementById('priority-content-select').value;
+                if (!contentId) {
+                    alert('Veuillez sélectionner un contenu');
+                    return;
+                }
+            } else if (type === 'playlist') {
+                playlistId = document.getElementById('priority-playlist-select').value;
+                if (!playlistId) {
+                    alert('Veuillez sélectionner une playlist');
+                    return;
+                }
+            } else {
+                alert('Veuillez choisir le type de contenu à afficher');
+                return;
+            }
+
+            // Récupérer les écrans sélectionnés
+            const selectedScreens = [];
+            document.querySelectorAll('#priority-screens-selection input[type="checkbox"]:checked').forEach(checkbox => {
+                selectedScreens.push(checkbox.value);
+            });
+
+            if (selectedScreens.length === 0) {
+                alert('Veuillez sélectionner au moins un écran');
+                return;
+            }
+
+            // Envoyer la commande d'affichage prioritaire
+            if (type === 'content') {
+                const content = contentLibrary.find(c => c.id === contentId);
+                selectedScreens.forEach(screenId => {
+                    socket.emit('display_content', {
+                        screen_id: screenId,
+                        content: content
+                    });
+                });
+                alert(`✅ Contenu "${content.name}" envoyé en priorité sur ${selectedScreens.length} écran(s)`);
+            } else if (type === 'playlist') {
+                const playlist = playlists[playlistId];
+                selectedScreens.forEach(screenId => {
+                    socket.emit('start_playlist', {
+                        screen_id: screenId,
+                        playlist: playlist
+                    });
+                });
+                alert(`✅ Playlist "${playlist.name}" envoyée en priorité sur ${selectedScreens.length} écran(s)`);
+            }
+
+            closePriorityDisplayModal();
         }
 
         // Auto-update
