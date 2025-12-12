@@ -26,6 +26,23 @@ check_network() {
     fi
 }
 
+# Récupérer la sortie vidéo active (HDMI-1, HDMI-0, etc.)
+OUTPUT=$(xrandr | grep " connected" | cut -d" " -f1)
+
+# Récupérer la résolution active (ex : 1920x1080)
+RESOLUTION=$(xrandr | grep -oP '(?<=\s)\d+x\d+(?=\s+\d+\.\d+\*?)' | head -n 1)
+
+# Extraire largeur et hauteur
+WIDTH=$(echo $RESOLUTION | cut -d"x" -f1)
+HEIGHT=$(echo $RESOLUTION | cut -d"x" -f2)
+
+# (optionnel) appliquer automatiquement le mode détecté
+# xrandr --output "$OUTPUT" --mode "$RESOLUTION"
+
+# forcer la résolution (remplace HDMI-1 si besoin)
+#xrandr --output HDMI-1 --mode 1920x1080 --rate 60
+
+
 # Premier lancement - Configuration nécessaire
 if [ "$CONFIGURED" = "false" ]; then
     echo "🔧 Premier lancement détecté - Lancement du wizard de configuration..."
@@ -50,6 +67,11 @@ if [ "$CONFIGURED" = "false" ]; then
             --disable-restore-session-state \
             --password-store=basic \
             --start-maximized \
+            --disable-session-crashed-bubble \
+            --incognito \
+            --disable-features=OverlayScrollbar \
+            --window-size=${WIDTH},${HEIGHT} \
+            --start-fullscreen \
             "http://$LOCAL_IP:$WIZARD_PORT" &
 
         # Attendre la fin du wizard
@@ -76,6 +98,11 @@ if [ "$CONFIGURED" = "false" ]; then
             --disable-restore-session-state \
             --password-store=basic \
             --start-maximized \
+            -disable-session-crashed-bubble \
+            --incognito \
+            --disable-features=OverlayScrollbar \
+            --window-size=${WIDTH},${HEIGHT} \
+            --start-fullscreen \
             "http://192.168.4.1:$WIZARD_PORT" &
 
         # Attendre la fin du wizard
@@ -131,6 +158,11 @@ if [ "$ROLE_PLAYER" = "true" ]; then
         --disable-restore-session-state \
         --password-store=basic \
         --start-maximized \
+        -disable-session-crashed-bubble \
+        --incognito \
+        --disable-features=OverlayScrollbar \
+        --window-size=${WIDTH},${HEIGHT} \
+        --start-fullscreen \
         "file://$BASE_DIR/raspberry/wizard/screen_info.html?id=${SCREEN_ID_ENCODED}&name=${SCREEN_NAME_ENCODED}&location=${SCREEN_LOCATION_ENCODED}&controller=${CONTROLLER_URL}" &
 
     sleep 10
@@ -147,6 +179,11 @@ if [ "$ROLE_PLAYER" = "true" ]; then
         --disable-restore-session-state \
         --password-store=basic \
         --start-maximized \
+        -disable-session-crashed-bubble \
+        --incognito \
+        --disable-features=OverlayScrollbar \
+        --window-size=${WIDTH},${HEIGHT} \
+        --start-fullscreen \
         "$DISPLAY_URL" &
 
     echo "✅ Player démarré avec l'URL: $DISPLAY_URL"

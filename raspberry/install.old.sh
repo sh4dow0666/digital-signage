@@ -36,14 +36,8 @@ apt-get upgrade -y
 echo -e "${YELLOW}⚙️  Configuration automatique de raspi-config...${NC}"
 # Configuration du boot automatique en mode desktop
 if command -v raspi-config >/dev/null 2>&1; then
-    echo -e "${BLUE}   → Activation de l'autologin...${NC}"
-    systemctl set-default multi-user.target
-    mkdir -p /etc/systemd/system/getty@tty1.service.d
-    cat <<EOF | sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf >/dev/null
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin $USER --noclear %I \$TERM
-EOF
+    echo -e "${BLUE}   → Activation de l'autologin desktop...${NC}"
+    raspi-config nonint do_boot_behaviour B4 2>/dev/null || echo -e "${YELLOW}   ⚠️  Configuration autologin manuelle requise${NC}"
 
     echo -e "${BLUE}   → Désactivation du screen blanking...${NC}"
     raspi-config nonint do_blanking 1 2>/dev/null || echo -e "${YELLOW}   ⚠️  Configuration screen blanking manuelle requise${NC}"
@@ -55,7 +49,6 @@ fi
 
 echo -e "${YELLOW}📦 Installation des dépendances...${NC}"
 apt-get install -y \
-    --no-install-recommends xserver-xorg xorg xinit \
     python3 \
     python3-pip \
     chromium \
@@ -140,26 +133,21 @@ EOF
 
 echo -e "${YELLOW}🖥️  Configuration du démarrage automatique en mode kiosk...${NC}"
 # Configuration de l'environnement graphique
-cat > /home/$USER/.xinitrc << 'EOF'
-#!/bin/bash
-
-xset -dpms
-xset s off
-xset s noblank
-
-# cacher le curseur
-unclutter -idle 0.1 &
-
-systemctl start digital-signage.service
+mkdir -p /home/$USER/.config/lxsession/LXDE-pi
+cat > /home/$USER/.config/lxsession/LXDE-pi/autostart << 'EOF'
+@lxpanel --profile LXDE-pi
+@pcmanfm --desktop --profile LXDE-pi
+@xscreensaver -no-splash
+@point-rpi
+@xset s off
+@xset -dpms
+@xset s noblank
 EOF
 
-chmod +x /home/$USER/.xinitrc
-
-# demarrage auomatique de xinit
-cat >> /home/$USER/.bash_profile << 'EOF'
-if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
-  startx
-fi
+# Désactiver l'économiseur d'écran
+cat >> /home/$USER/.config/lxsession/LXDE-pi/autostart << 'EOF'
+@sed -i 's/"exited_cleanly": false/"exited_cleanly": true/' ~/.config/chromium/Default/Preferences
+@unclutter -idle 0.1 -root
 EOF
 
 chown -R $USER:$USER /home/$USER/.config
@@ -170,7 +158,7 @@ chmod -R 755 $INSTALL_DIR/raspberry/scripts
 
 echo -e "${YELLOW}🚀 Activation du service...${NC}"
 systemctl daemon-reload
-#systemctl enable $SERVICE_NAME.service
+systemctl enable $SERVICE_NAME.service
 
 echo -e "${YELLOW}📱 Installation du script de maintenance...${NC}"
 cp $INSTALL_DIR/raspberry/scripts/maintenance.sh /usr/local/bin/ds-maintenance
