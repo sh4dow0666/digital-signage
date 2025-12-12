@@ -163,12 +163,8 @@ if [ "$ROLE_PLAYER" = "true" ]; then
         --password-store=basic \
         --start-maximized \
         --disable-session-crashed-bubble \
-        --incognito \
         --disable-features=OverlayScrollbar \
         --window-size=${WIDTH},${HEIGHT} \
-        --start-fullscreen \
-        --disable-glsl-translator \
-        --disable-features=Translate \
         "file://$BASE_DIR/raspberry/wizard/screen_info.html?id=${SCREEN_ID_ENCODED}&name=${SCREEN_NAME_ENCODED}&location=${SCREEN_LOCATION_ENCODED}&controller=${CONTROLLER_URL}" &
 
     sleep 10
