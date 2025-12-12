@@ -165,9 +165,9 @@ if [ "$ROLE_PLAYER" = "true" ]; then
         --disable-session-crashed-bubble \
         --disable-features=OverlayScrollbar \
         --window-size=${WIDTH},${HEIGHT} \
-        "file://$BASE_DIR/raspberry/wizard/screen_info.html?id=${SCREEN_ID_ENCODED}&name=${SCREEN_NAME_ENCODED}&location=${SCREEN_LOCATION_ENCODED}&controller=${CONTROLLER_URL}" &
+        "file://$BASE_DIR/wizard/screen_info.html?id=${SCREEN_ID_ENCODED}&name=${SCREEN_NAME_ENCODED}&location=${SCREEN_LOCATION_ENCODED}&controller=${CONTROLLER_URL}" &
 
-    sleep 10
+    sleep 20
 
     # Tuer Chromium et relancer avec l'URL du display
     pkill -f chromium
