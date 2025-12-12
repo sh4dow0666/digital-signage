@@ -985,6 +985,8 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // remove padding of body
+                    document.body.style.padding = '0';
                     // Afficher un message permanent car le système est arrêté
                     document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 24px; color: #dc3545; background: black;">🛑 Le système est en cours d\'arrêt</div>';
                 } else {
@@ -1006,6 +1008,8 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // remove padding of body
+                    document.body.style.padding = '0';
                     // Afficher un message permanent
                     document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 24px; color: #dc3545; background: black;">🛑 Le système est en cours de redémarrage...</div>';
                 } else {
