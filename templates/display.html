@@ -204,12 +204,45 @@
             console.log("📢 Mise à jour de l'état reçue:", data);
             screensPlaylists = data.playlists;
             contentLibrary = data.content;
-            // si la playliste en cours a été modifiée, on la relance
-            if (currentPlaylistId !== null && activeScheduledPlaylistId !== null) {
-                if(!screensPlaylists[currentPlaylistId] || JSON.stringify(screensPlaylists[currentPlaylistId].items) !== JSON.stringify(currentPlaylist)) {
-                    console.log("   → La playlist en cours a été modifiée, redémarrage...");
+
+            // Vérifier si une playlist est en cours de lecture
+            if (currentPlaylistId !== null && currentPlaylist.length > 0) {
+                const updatedPlaylist = screensPlaylists[currentPlaylistId];
+
+                // Si la playlist a été supprimée
+                if (!updatedPlaylist) {
+                    console.log("   → La playlist en cours a été supprimée, arrêt...");
                     stopPlaylist();
+                    isPriorityActive = false;
                     checkSchedule();
+                    return;
+                }
+
+                // Comparer les items pour voir s'il y a eu des changements
+                const currentItemsJson = JSON.stringify(currentPlaylist);
+                const updatedItemsJson = JSON.stringify(updatedPlaylist.items);
+
+                if (currentItemsJson !== updatedItemsJson) {
+                    console.log("   → La playlist en cours a été modifiée, mise à jour...");
+
+                    // Mettre à jour les items de la playlist
+                    currentPlaylist = updatedPlaylist.items;
+
+                    // Ajuster l'index si nécessaire
+                    if (currentPlaylistIndex >= currentPlaylist.length) {
+                        currentPlaylistIndex = 0;
+                    }
+
+                    // Si c'est une playlist planifiée, la relancer depuis le début
+                    if (activeScheduledPlaylistId !== null) {
+                        console.log("   → Playlist planifiée, redémarrage depuis le début...");
+                        stopPlaylist();
+                        checkSchedule();
+                    } else {
+                        // Pour les playlists manuelles/prioritaires, continuer la lecture
+                        console.log("   → Playlist manuelle/prioritaire, continuation avec les nouveaux items...");
+                        // La playlist continuera automatiquement avec les nouveaux items
+                    }
                 }
             }
         });
