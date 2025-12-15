@@ -520,6 +520,11 @@
 
         socket.on('start_playlist', (data) => {
             console.log('📋 Démarrage de la playlist manuelle:', data.name);
+            console.log('🔍 DEBUG DATA REÇUES:', {
+                priority: data.priority,
+                custom_duration: data.custom_duration,
+                has_items: data.items ? data.items.length : 0
+            });
 
             // IMPORTANT: Marquer comme prioritaire IMMÉDIATEMENT pour bloquer checkSchedule()
             const isPriority = data.priority || false;

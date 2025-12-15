@@ -2145,6 +2145,7 @@
             const seconds = parseInt(document.getElementById('priority-seconds').value) || 0;
             const totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
             const duration = totalSeconds > 0 ? totalSeconds : null;
+            console.log('🔍 DURÉE CALCULÉE:', { hours, minutes, seconds, totalSeconds, duration });
 
             // Récupérer les écrans sélectionnés
             const selectedScreens = [];
@@ -2172,12 +2173,14 @@
             } else if (type === 'playlist') {
                 const playlist = playlists[playlistId];
                 selectedScreens.forEach(screenId => {
-                    socket.emit('start_playlist', {
+                    const payload = {
                         screen_id: screenId,
                         playlist_id: playlistId,
                         priority: true,
                         custom_duration: duration
-                    });
+                    };
+                    console.log('🔍 ENVOI start_playlist:', payload);
+                    socket.emit('start_playlist', payload);
                 });
                 //alert(`✅ Playlist "${playlist.name}" envoyée en priorité sur ${selectedScreens.length} écran(s)`);
             }

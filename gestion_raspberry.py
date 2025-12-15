@@ -979,6 +979,7 @@ def handle_start_playlist(data):
 
     # Envoyer la durée personnalisée comme propriété de la playlist, pas des items
     emit('start_playlist', {
+        'id': playlist_id,
         'name': playlist['name'],
         'items': playlist['items'],
         'priority': priority,
