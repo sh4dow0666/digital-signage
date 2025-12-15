@@ -785,11 +785,37 @@ def handle_delete_content(data):
 @socketio.on('update_content')
 def handle_update_content(data):
     """Met à jour un contenu existant"""
-    global content_library
+    global content_library, playlists
+
+    # Récupérer l'ancien contenu pour comparer la durée
+    old_content = next((c for c in content_library if c['id'] == data['id']), None)
+
+    # Mettre à jour le contenu dans la bibliothèque
     for i, content in enumerate(content_library):
         if content['id'] == data['id']:
             content_library[i] = data
             break
+
+    # Mettre à jour les playlists qui contiennent ce contenu
+    if old_content:
+        for playlist_id, playlist in playlists.items():
+            for item in playlist['items']:
+                # Si l'item contient le contenu modifié
+                if item['content']['id'] == data['id']:
+                    # Mettre à jour toutes les propriétés du contenu sauf la durée
+                    item['content']['name'] = data['name']
+                    item['content']['type'] = data['type']
+                    item['content']['url'] = data['url']
+
+                    # Pour la durée : si c'était la durée par défaut du contenu, mettre à jour
+                    # Sinon garder la durée personnalisée de la playlist
+                    if item['duration'] == old_content['duration']:
+                        item['duration'] = data['duration']
+
+                    # Mettre à jour aussi la durée dans l'objet content de l'item
+                    item['content']['duration'] = data['duration']
+
+        save_playlists()
 
     save_content()
     emit('state_update', {
@@ -802,6 +828,11 @@ def handle_update_content(data):
     # Envoyer la bibliothèque mise à jour aux écrans
     emit('send_content_library', {
         'content': content_library
+    }, broadcast=True)
+
+    # Envoyer les playlists mises à jour aux écrans
+    emit('send_full_playlist_list', {
+        'playlists': playlists
     }, broadcast=True)
 
 @socketio.on('display_content')
