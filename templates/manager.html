@@ -395,9 +395,24 @@
 
                     <div class="form-group">
                         <label>Durée personnalisée (optionnel)</label>
-                        <input type="number" id="priority-duration" min="0" placeholder="Durée en secondes (0 = infini)">
-                        <small style="color: #999; font-size: 0.85em; display: block; margin-top: 5px;">
-                            Si laissé vide, utilise la durée par défaut du contenu/playlist
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <div style="flex: 1;">
+                                <input type="number" id="priority-hours" min="0" max="23" placeholder="HH" style="text-align: center;">
+                                <small style="display: block; text-align: center; color: #999; margin-top: 3px;">Heures</small>
+                            </div>
+                            <span style="font-size: 1.5em; color: #667eea;">:</span>
+                            <div style="flex: 1;">
+                                <input type="number" id="priority-minutes" min="0" max="59" placeholder="MM" style="text-align: center;">
+                                <small style="display: block; text-align: center; color: #999; margin-top: 3px;">Minutes</small>
+                            </div>
+                            <span style="font-size: 1.5em; color: #667eea;">:</span>
+                            <div style="flex: 1;">
+                                <input type="number" id="priority-seconds" min="0" max="59" placeholder="SS" style="text-align: center;">
+                                <small style="display: block; text-align: center; color: #999; margin-top: 3px;">Secondes</small>
+                            </div>
+                        </div>
+                        <small style="color: #999; font-size: 0.85em; display: block; margin-top: 8px;">
+                            Si laissé vide ou 00:00:00, utilise la durée par défaut du contenu/playlist
                         </small>
                     </div>
 
@@ -410,7 +425,10 @@
                         <div id="priority-screens-selection" class="selection-grid"></div>
                     </div>
 
-                    <button class="btn" onclick="sendPriorityDisplay()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">⚡ Afficher en priorité</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn" onclick="sendPriorityDisplay()" style="flex: 1; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">⚡ Afficher en priorité</button>
+                        <button class="btn" onclick="clearPriorityDisplay()" style="flex: 1; background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">🗑️ Effacer et revenir au planning</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2012,7 +2030,9 @@
             updatePriorityPlaylistSelect();
             updatePriorityScreensSelection();
             document.getElementById('priority-type').value = '';
-            document.getElementById('priority-duration').value = '';
+            document.getElementById('priority-hours').value = '';
+            document.getElementById('priority-minutes').value = '';
+            document.getElementById('priority-seconds').value = '';
             document.getElementById('priority-content-group').style.display = 'none';
             document.getElementById('priority-playlist-group').style.display = 'none';
             document.getElementById('priority-display-modal').classList.add('active');
@@ -2120,8 +2140,11 @@
             }
 
             // Récupérer la durée personnalisée (optionnelle)
-            const customDuration = document.getElementById('priority-duration').value;
-            const duration = customDuration !== '' ? parseInt(customDuration) : null;
+            const hours = parseInt(document.getElementById('priority-hours').value) || 0;
+            const minutes = parseInt(document.getElementById('priority-minutes').value) || 0;
+            const seconds = parseInt(document.getElementById('priority-seconds').value) || 0;
+            const totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+            const duration = totalSeconds > 0 ? totalSeconds : null;
 
             // Récupérer les écrans sélectionnés
             const selectedScreens = [];
@@ -2158,6 +2181,28 @@
                 });
                 //alert(`✅ Playlist "${playlist.name}" envoyée en priorité sur ${selectedScreens.length} écran(s)`);
             }
+
+            closePriorityDisplayModal();
+        }
+
+        function clearPriorityDisplay() {
+            // Récupérer les écrans sélectionnés
+            const selectedScreens = [];
+            document.querySelectorAll('#priority-screens-selection input[type="checkbox"]:checked').forEach(checkbox => {
+                selectedScreens.push(checkbox.value);
+            });
+
+            if (selectedScreens.length === 0) {
+                alert('Veuillez sélectionner au moins un écran');
+                return;
+            }
+
+            // Envoyer la commande d'effacement pour chaque écran sélectionné
+            selectedScreens.forEach(screenId => {
+                socket.emit('clear_screen', {
+                    screen_id: screenId
+                });
+            });
 
             closePriorityDisplayModal();
         }

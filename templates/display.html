@@ -507,6 +507,9 @@
             isPriorityActive = false; // Réinitialiser le flag prioritaire
             currentContentName = null;
             currentContentStartTime = null;
+
+            // Reprendre le planning normal immédiatement
+            checkSchedule();
         });
 
         socket.on('start_playlist', (data) => {
