@@ -223,15 +223,7 @@
                 const updatedItemsJson = JSON.stringify(updatedPlaylist.items);
 
                 if (currentItemsJson !== updatedItemsJson) {
-                    console.log("   → La playlist en cours a été modifiée, mise à jour...");
-
-                    // Mettre à jour les items de la playlist
-                    currentPlaylist = updatedPlaylist.items;
-
-                    // Ajuster l'index si nécessaire
-                    if (currentPlaylistIndex >= currentPlaylist.length) {
-                        currentPlaylistIndex = 0;
-                    }
+                    console.log("   → La playlist en cours a été modifiée");
 
                     // Si c'est une playlist planifiée, la relancer depuis le début
                     if (activeScheduledPlaylistId !== null) {
@@ -239,9 +231,9 @@
                         stopPlaylist();
                         checkSchedule();
                     } else {
-                        // Pour les playlists manuelles/prioritaires, continuer la lecture
-                        console.log("   → Playlist manuelle/prioritaire, continuation avec les nouveaux items...");
-                        // La playlist continuera automatiquement avec les nouveaux items
+                        // Pour les playlists manuelles/prioritaires, noter qu'il faut recharger
+                        // La mise à jour se fera automatiquement au prochain item
+                        console.log("   → Playlist manuelle/prioritaire, mise à jour au prochain item...");
                     }
                 }
             }
@@ -623,6 +615,25 @@
         }
 
         function playNextInPlaylist() {
+            // Vérifier si la playlist a été mise à jour dans screensPlaylists
+            if (currentPlaylistId && screensPlaylists[currentPlaylistId]) {
+                const updatedPlaylist = screensPlaylists[currentPlaylistId];
+                const currentItemsJson = JSON.stringify(currentPlaylist);
+                const updatedItemsJson = JSON.stringify(updatedPlaylist.items);
+
+                if (currentItemsJson !== updatedItemsJson) {
+                    console.log('🔄 Rechargement de la playlist mise à jour...');
+                    currentPlaylist = updatedPlaylist.items;
+                    currentPlaylistName = updatedPlaylist.name;
+
+                    // Ajuster l'index si nécessaire
+                    if (currentPlaylistIndex >= currentPlaylist.length) {
+                        currentPlaylistIndex = 0;
+                        console.log('   → Index ajusté à 0 (playlist plus courte)');
+                    }
+                }
+            }
+
             if (currentPlaylist.length === 0) {
                 console.log('⚠️ Playlist vide');
                 return;
