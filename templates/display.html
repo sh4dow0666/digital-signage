@@ -407,6 +407,9 @@
 
             console.log('📺 Affichage du contenu manuel:', content.name);
 
+            // IMPORTANT: Marquer comme prioritaire IMMÉDIATEMENT pour bloquer checkSchedule()
+            isPriorityActive = isPriority;
+
             // Arrêter toute playlist en cours
             stopPlaylist();
 
@@ -418,9 +421,6 @@
 
             // Réinitialiser la playlist planifiée active (affichage manuel)
             activeScheduledPlaylistId = null;
-
-            // Marquer comme prioritaire si c'est le cas
-            isPriorityActive = isPriority;
 
             // Mettre à jour les infos de debug
             currentContentStartTime = Date.now();
@@ -489,6 +489,12 @@
 
         socket.on('start_playlist', (data) => {
             console.log('📋 Démarrage de la playlist manuelle:', data.name);
+
+            // IMPORTANT: Marquer comme prioritaire IMMÉDIATEMENT pour bloquer checkSchedule()
+            const isPriority = data.priority || false;
+            isPriorityActive = isPriority;
+            currentPlaylistIsPriority = isPriority;
+
             stopPlaylist();
             // Annuler le timeout de contenu s'il existe
             if (contentTimeout) {
@@ -500,8 +506,6 @@
             currentPlaylist = data.items;
             currentPlaylistIndex = 0;
             currentPlaylistName = data.name; // Stocker le nom de la playlist
-            currentPlaylistIsPriority = data.priority || false; // Stocker si c'est prioritaire
-            isPriorityActive = data.priority || false; // Marquer comme prioritaire si c'est le cas
             playNextInPlaylist();
         });
 
