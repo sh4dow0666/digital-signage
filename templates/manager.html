@@ -208,6 +208,7 @@
                                 <div>📺 Contenu actuel: <span id="debug-current-content">--</span></div>
                                 <div>📋 Playlist active: <span id="debug-playlist">--</span></div>
                                 <div>⏱️ Index playlist: <span id="debug-playlist-index">--</span></div>
+                                <div>⚡ Affichage prioritaire: <span id="debug-priority-active" style="font-weight: bold;">--</span></div>
                             </div>
                         </div>
 
@@ -1710,6 +1711,17 @@
             document.getElementById('debug-playlist-index').textContent = debugInfo.playlist_index !== undefined
                 ? `${debugInfo.playlist_index + 1}/${debugInfo.playlist_length || '?'}`
                 : '--';
+
+            // Affichage prioritaire
+            const isPriorityActive = screen.is_priority_active || false;
+            const priorityElement = document.getElementById('debug-priority-active');
+            if (isPriorityActive) {
+                priorityElement.textContent = '⚡ OUI';
+                priorityElement.style.color = '#f5576c';
+            } else {
+                priorityElement.textContent = 'Non';
+                priorityElement.style.color = '#999';
+            }
 
             // Temporisation
             if (debugInfo.elapsed_time !== undefined) {
