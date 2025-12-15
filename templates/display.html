@@ -51,6 +51,7 @@
         let isPriorityActive = false; // Si un contenu/playlist prioritaire est actif
         let showClock = false; // Affichage de l'horloge
         let clockInterval = null; // Intervalle de mise à jour de l'horloge
+        let currentPlaylistId = null; // ID de la playlist actuelle
 
         // Fonction pour mettre à jour l'horloge
         function updateClock() {
@@ -202,6 +203,13 @@
             console.log("📢 Mise à jour de l'état reçue:", data);
             screensPlaylists = data.playlists;
             contentLibrary = data.content;
+            // si la playliste en cours a été modifiée, on la relance
+            if (currentPlaylistId !== null) {
+                if(!screensPlaylists[currentPlaylistId] || JSON.stringify(screensPlaylists[currentPlaylistId].items) !== JSON.stringify(currentPlaylist)) {
+                    console.log("   → La playlist en cours a été modifiée, redémarrage...");
+                    socket.emit('start_playlist', { screen_id: screenId });
+                }
+            }
         });
 
         // CORRECTION: Réception de la liste complète des playlists
@@ -318,6 +326,7 @@
                     // Mémoriser quelle playlist planifiée est maintenant active
                     activeScheduledPlaylistId = targetPlaylistId;
                     currentPlaylistName = playlist.name; // Stocker le nom de la playlist
+                    currentPlaylistId = playlist.id; // Stocker l'ID de la playlist
 
                     // Démarrer la nouvelle playlist
                     currentPlaylist = playlist.items;
@@ -518,6 +527,7 @@
             currentPlaylist = data.items;
             currentPlaylistIndex = 0;
             currentPlaylistName = data.name; // Stocker le nom de la playlist
+            currentPlaylistId = data.id; // Stocker l'ID de la playlist
             playNextInPlaylist();
         });
 
@@ -531,6 +541,7 @@
             currentPlaylistIndex = 0;
             currentContentName = null;
             currentPlaylistName = null;
+            currentPlaylistId = null;
             currentPlaylistIsPriority = false;
         }
 
