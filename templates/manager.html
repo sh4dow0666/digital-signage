@@ -634,6 +634,7 @@
                     <div class="screen-info" title="${screen.location}"><i class="fa-solid fa-location-dot" style="color:red; padding: 0 4px;"></i> Emplacement: ${truncateText(screen.location, 20)}</div>
                     <div class="screen-info" title="${screen.current_playlist || 'Aucune en cours'}">📋 Playlist: ${truncateText(screen.current_playlist || 'Aucune en cours', 15)}</div>
                     <div class="screen-info" title="${screen.current_content || 'Aucun en cours'}">🎬 Contenu: ${truncateText(screen.current_content || 'Aucun en cours', 15)}</div>
+                    <div class="screen-info" style="font-weight: bold; color: ${screen.is_priority_active ? '#f5576c' : '#999'};">⚡ Affichage prioritaire: ${screen.is_priority_active ? 'OUI' : 'Non'}</div>
                 `;
                 container.appendChild(card);
             }

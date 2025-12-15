@@ -19,6 +19,7 @@
         <div class="debug-line"><strong>Index:</strong> <span id="debug-index">--</span></div>
         <div class="debug-line"><strong>Temps écoulé:</strong> <span id="debug-elapsed">--</span></div>
         <div class="debug-line"><strong>Durée totale:</strong> <span id="debug-duration">--</span></div>
+        <div class="debug-line"><strong>Affichage prioritaire:</strong> <span id="debug-priority-active" style="font-weight: bold;">Non</span></div>
         <div class="debug-line"><strong>Dernière vérif:</strong> <span id="debug-last-check">--</span></div>
     </div>
 
@@ -153,6 +154,17 @@
             }
 
             document.getElementById('debug-duration').textContent = currentContentDuration > 0 ? formatTime(currentContentDuration) : '∞ (infini)';
+
+            // Afficher l'état de l'affichage prioritaire
+            const priorityElement = document.getElementById('debug-priority-active');
+            if (isPriorityActive) {
+                priorityElement.textContent = '⚡ OUI';
+                priorityElement.style.color = '#f5576c';
+            } else {
+                priorityElement.textContent = 'Non';
+                priorityElement.style.color = '#999';
+            }
+
             document.getElementById('debug-last-check').textContent = new Date().toLocaleTimeString();
         }
 
@@ -606,7 +618,8 @@
                 playlist_index: currentPlaylist.length > 0 ? currentPlaylistIndex : null,
                 playlist_length: currentPlaylist.length,
                 elapsed_time: elapsedTime,
-                current_duration: currentContentDuration
+                current_duration: currentContentDuration,
+                is_priority_active: isPriorityActive // Affichage prioritaire en cours
             };
 
             socket.emit('update_debug_info', debugInfo);

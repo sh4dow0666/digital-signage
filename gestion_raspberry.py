@@ -1082,8 +1082,12 @@ def handle_update_debug_info(data):
             'playlist_index': data.get('playlist_index'),
             'playlist_length': data.get('playlist_length'),
             'elapsed_time': data.get('elapsed_time'),
-            'current_duration': data.get('current_duration')
+            'current_duration': data.get('current_duration'),
+            'is_priority_active': data.get('is_priority_active', False)
         }
+
+        # Stocker aussi is_priority_active au niveau principal pour un accès facile
+        screens[screen_id]['is_priority_active'] = data.get('is_priority_active', False)
 
         # Mettre à jour current_content et current_playlist pour l'affichage
         screens[screen_id]['current_content'] = data.get('current_content_name') or None
