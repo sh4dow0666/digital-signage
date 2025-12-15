@@ -818,6 +818,8 @@ def handle_update_content(data):
         save_playlists()
 
     save_content()
+
+    # Envoyer l'état complet mis à jour (inclut playlists, contenu, etc.)
     emit('state_update', {
         'screens': screens,
         'content': content_library,
@@ -825,14 +827,9 @@ def handle_update_content(data):
         'schedules': schedules
     }, broadcast=True)
 
-    # Envoyer la bibliothèque mise à jour aux écrans
+    # Envoyer la bibliothèque mise à jour aux écrans display
     emit('send_content_library', {
         'content': content_library
-    }, broadcast=True)
-
-    # Envoyer les playlists mises à jour aux écrans
-    emit('send_full_playlist_list', {
-        'playlists': playlists
     }, broadcast=True)
 
 @socketio.on('display_content')
