@@ -204,10 +204,11 @@
             screensPlaylists = data.playlists;
             contentLibrary = data.content;
             // si la playliste en cours a été modifiée, on la relance
-            if (currentPlaylistId !== null) {
+            if (currentPlaylistId !== null && activeScheduledPlaylistId !== null) {
                 if(!screensPlaylists[currentPlaylistId] || JSON.stringify(screensPlaylists[currentPlaylistId].items) !== JSON.stringify(currentPlaylist)) {
                     console.log("   → La playlist en cours a été modifiée, redémarrage...");
-                    socket.emit('start_playlist', { screen_id: screenId });
+                    stopPlaylist();
+                    checkSchedule();
                 }
             }
         });
