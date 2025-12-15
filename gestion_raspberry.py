@@ -809,13 +809,23 @@ def handle_display_content(data):
     """Affiche un contenu sur un écran"""
     screen_id = data['screen_id']
     content_id = data['content_id']
-    
+    priority = data.get('priority', False)
+    custom_duration = data.get('custom_duration', None)
+
     content = next((c for c in content_library if c['id'] == content_id), None)
     if content and screen_id in screens:
         screens[screen_id]['current_content'] = content['name']
-        
-        emit('show_content', content, room=screens[screen_id]['sid'])
-        
+
+        # Si c'est un affichage prioritaire avec durée personnalisée
+        content_to_send = content.copy()
+        if priority and custom_duration is not None:
+            content_to_send['duration'] = custom_duration
+
+        emit('show_content', {
+            'content': content_to_send,
+            'priority': priority
+        }, room=screens[screen_id]['sid'])
+
         emit('state_update', {
             'screens': screens,
             'content': content_library,
@@ -912,16 +922,28 @@ def handle_start_playlist(data):
     """Lance une playlist sur un écran (pour test manuel)"""
     screen_id = data['screen_id']
     playlist_id = data['playlist_id']
-    
+    priority = data.get('priority', False)
+    custom_duration = data.get('custom_duration', None)
+
     if screen_id not in screens or playlist_id not in playlists:
         return
-    
+
     playlist = playlists[playlist_id]
     screens[screen_id]['current_content'] = f"Playlist: {playlist['name']}"
-    
+
+    # Si c'est un affichage prioritaire avec durée personnalisée, modifier les items
+    items_to_send = playlist['items']
+    if priority and custom_duration is not None:
+        items_to_send = []
+        for item in playlist['items']:
+            item_copy = item.copy()
+            item_copy['duration'] = custom_duration
+            items_to_send.append(item_copy)
+
     emit('start_playlist', {
         'name': playlist['name'],
-        'items': playlist['items']
+        'items': items_to_send,
+        'priority': priority
     }, room=screens[screen_id]['sid'])
     
     emit('state_update', {

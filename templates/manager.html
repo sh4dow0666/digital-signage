@@ -392,6 +392,14 @@
                         <select id="priority-playlist-select"></select>
                     </div>
 
+                    <div class="form-group">
+                        <label>Durée personnalisée (optionnel)</label>
+                        <input type="number" id="priority-duration" min="0" placeholder="Durée en secondes (0 = infini)">
+                        <small style="color: #999; font-size: 0.85em; display: block; margin-top: 5px;">
+                            Si laissé vide, utilise la durée par défaut du contenu/playlist
+                        </small>
+                    </div>
+
                     <h3 style="color: #667eea; margin-bottom: 15px; margin-top: 30px;">Sélection des écrans</h3>
                     <div class="form-group">
                         <div style="margin-bottom: 15px;">
@@ -1991,6 +1999,7 @@
             updatePriorityPlaylistSelect();
             updatePriorityScreensSelection();
             document.getElementById('priority-type').value = '';
+            document.getElementById('priority-duration').value = '';
             document.getElementById('priority-content-group').style.display = 'none';
             document.getElementById('priority-playlist-group').style.display = 'none';
             document.getElementById('priority-display-modal').classList.add('active');
@@ -2097,6 +2106,10 @@
                 return;
             }
 
+            // Récupérer la durée personnalisée (optionnelle)
+            const customDuration = document.getElementById('priority-duration').value;
+            const duration = customDuration !== '' ? parseInt(customDuration) : null;
+
             // Récupérer les écrans sélectionnés
             const selectedScreens = [];
             document.querySelectorAll('#priority-screens-selection input[type="checkbox"]:checked').forEach(checkbox => {
@@ -2114,7 +2127,9 @@
                 selectedScreens.forEach(screenId => {
                     socket.emit('display_content', {
                         screen_id: screenId,
-                        content_id: contentId
+                        content_id: contentId,
+                        priority: true,
+                        custom_duration: duration
                     });
                 });
                 alert(`✅ Contenu "${content.name}" envoyé en priorité sur ${selectedScreens.length} écran(s)`);
@@ -2123,7 +2138,9 @@
                 selectedScreens.forEach(screenId => {
                     socket.emit('start_playlist', {
                         screen_id: screenId,
-                        playlist_id: playlistId
+                        playlist_id: playlistId,
+                        priority: true,
+                        custom_duration: duration
                     });
                 });
                 alert(`✅ Playlist "${playlist.name}" envoyée en priorité sur ${selectedScreens.length} écran(s)`);

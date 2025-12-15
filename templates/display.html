@@ -45,6 +45,7 @@
         let currentContentDuration = 0; // Durée du contenu actuel
         let currentContentName = null; // Nom du contenu actuel (pour affichage)
         let currentPlaylistName = null; // Nom de la playlist active
+        let currentPlaylistIsPriority = false; // Si la playlist actuelle est prioritaire
         let showClock = false; // Affichage de l'horloge
         let clockInterval = null; // Intervalle de mise à jour de l'horloge
 
@@ -392,30 +393,34 @@
         }
 
         socket.on('show_content', (data) => {
-            console.log('📺 Affichage du contenu manuel:', data.name);
+            // Gérer le nouveau format {content: ..., priority: ...} ou l'ancien format direct
+            const content = data.content || data;
+            const isPriority = data.priority || false;
+
+            console.log('📺 Affichage du contenu manuel:', content.name);
             // Réinitialiser la playlist planifiée active (affichage manuel)
             activeScheduledPlaylistId = null;
 
             // Mettre à jour les infos de debug
             currentContentStartTime = Date.now();
-            currentContentDuration = data.duration || 0;
-            currentContentName = data.name;
+            currentContentDuration = content.duration || 0;
+            currentContentName = content.name;
 
             const container = document.getElementById('content-container');
             container.innerHTML = '';
 
-            if (data.type === 'url') {
-                container.innerHTML = `<iframe src="${data.url}" allowfullscreen></iframe>`;
-            } else if (data.type === 'video') {
+            if (content.type === 'url') {
+                container.innerHTML = `<iframe src="${content.url}" allowfullscreen></iframe>`;
+            } else if (content.type === 'video') {
                 container.innerHTML = `
-                    <video src="${data.url}" autoplay loop controls>
+                    <video src="${content.url}" autoplay loop controls>
                         Votre navigateur ne supporte pas la vidéo.
                     </video>
                 `;
-            } else if (data.type === 'image') {
-                container.innerHTML = `<img src="${data.url}" alt="Image">`;
-            } else if (data.type === 'youtube') {
-                const videoId = data.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1];
+            } else if (content.type === 'image') {
+                container.innerHTML = `<img src="${content.url}" alt="Image">`;
+            } else if (content.type === 'youtube') {
+                const videoId = content.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1];
                 if (videoId) {
                     container.innerHTML = `
                         <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${videoId}"
@@ -425,10 +430,14 @@
                 }
             }
 
-            if (data.duration > 0) {
+            if (content.duration > 0) {
                 setTimeout(() => {
                     container.innerHTML = '<div class="waiting">Contenu terminé</div>';
-                }, data.duration * 1000);
+                    // Si c'est un affichage prioritaire, notifier le serveur pour mettre à jour les infos
+                    if (isPriority) {
+                        socket.emit('clear_screen', { screen_id: screenId });
+                    }
+                }, content.duration * 1000);
             }
         });
 
@@ -451,6 +460,7 @@
             currentPlaylist = data.items;
             currentPlaylistIndex = 0;
             currentPlaylistName = data.name; // Stocker le nom de la playlist
+            currentPlaylistIsPriority = data.priority || false; // Stocker si c'est prioritaire
             playNextInPlaylist();
         });
 
@@ -464,6 +474,7 @@
             currentPlaylistIndex = 0;
             currentContentName = null;
             currentPlaylistName = null;
+            currentPlaylistIsPriority = false;
         }
 
         function playNextInPlaylist() {
@@ -509,8 +520,21 @@
 
             // Programmer le prochain contenu
             playlistInterval = setTimeout(() => {
-                currentPlaylistIndex = (currentPlaylistIndex + 1) % currentPlaylist.length;
-                playNextInPlaylist();
+                currentPlaylistIndex++;
+
+                // Si c'est une playlist prioritaire et qu'on a fini tous les éléments
+                if (currentPlaylistIsPriority && currentPlaylistIndex >= currentPlaylist.length) {
+                    console.log('✅ Playlist prioritaire terminée');
+                    const container = document.getElementById('content-container');
+                    container.innerHTML = '<div class="waiting">Contenu terminé</div>';
+                    stopPlaylist();
+                    // Notifier le serveur pour mettre à jour les infos
+                    socket.emit('clear_screen', { screen_id: screenId });
+                } else {
+                    // Playlist normale : boucler
+                    currentPlaylistIndex = currentPlaylistIndex % currentPlaylist.length;
+                    playNextInPlaylist();
+                }
             }, duration * 1000);
         }
 
