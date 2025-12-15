@@ -787,8 +787,10 @@ def handle_update_content(data):
     """Met à jour un contenu existant"""
     global content_library, playlists
 
-    # Récupérer l'ancien contenu pour comparer la durée
+    # Récupérer l'ancien contenu pour comparer la durée (faire une copie pour éviter les références)
     old_content = next((c for c in content_library if c['id'] == data['id']), None)
+    if old_content:
+        old_content = old_content.copy()  # Copie pour préserver l'ancienne durée
 
     # Mettre à jour le contenu dans la bibliothèque
     for i, content in enumerate(content_library):
@@ -798,10 +800,15 @@ def handle_update_content(data):
 
     # Mettre à jour les playlists qui contiennent ce contenu
     if old_content:
+        playlists_updated = False
         for playlist_id, playlist in playlists.items():
             for item in playlist['items']:
                 # Si l'item contient le contenu modifié
                 if item['content']['id'] == data['id']:
+                    print(f"🔄 Mise à jour du contenu '{data['name']}' dans la playlist '{playlist['name']}'")
+                    print(f"   Ancienne durée item: {item['duration']}s | Ancienne durée contenu: {old_content['duration']}s")
+                    print(f"   Nouvelle durée contenu: {data['duration']}s")
+
                     # Mettre à jour toutes les propriétés du contenu sauf la durée
                     item['content']['name'] = data['name']
                     item['content']['type'] = data['type']
@@ -811,11 +818,19 @@ def handle_update_content(data):
                     # Sinon garder la durée personnalisée de la playlist
                     if item['duration'] == old_content['duration']:
                         item['duration'] = data['duration']
+                        print(f"   ✅ Durée de l'item mise à jour: {item['duration']}s")
+                        playlists_updated = True
+                    else:
+                        print(f"   ⚠️  Durée personnalisée conservée: {item['duration']}s")
 
                     # Mettre à jour aussi la durée dans l'objet content de l'item
                     item['content']['duration'] = data['duration']
 
-        save_playlists()
+        if playlists_updated:
+            save_playlists()
+            print(f"💾 Playlists sauvegardées avec les mises à jour")
+        else:
+            print(f"ℹ️  Aucune playlist à mettre à jour (durées personnalisées ou contenu non trouvé)")
 
     save_content()
 
