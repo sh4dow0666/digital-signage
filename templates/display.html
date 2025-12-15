@@ -33,6 +33,7 @@
         const screenId = new URLSearchParams(window.location.search).get('id');
         const screenName = new URLSearchParams(window.location.search).get('name') || 'Écran ' + screenId;
         let playlistInterval = null;
+        let contentTimeout = null; // Timeout pour la durée d'un contenu simple
         let currentPlaylistIndex = 0;
         let currentPlaylist = [];
         let schedule = [];
@@ -46,6 +47,7 @@
         let currentContentName = null; // Nom du contenu actuel (pour affichage)
         let currentPlaylistName = null; // Nom de la playlist active
         let currentPlaylistIsPriority = false; // Si la playlist actuelle est prioritaire
+        let isPriorityActive = false; // Si un contenu/playlist prioritaire est actif
         let showClock = false; // Affichage de l'horloge
         let clockInterval = null; // Intervalle de mise à jour de l'horloge
 
@@ -252,6 +254,12 @@
         setInterval(checkSchedule, 10000);
 
         function checkSchedule() {
+            // Ne pas vérifier le planning si un contenu prioritaire est en cours
+            if (isPriorityActive) {
+                console.log('⏰ Contenu prioritaire en cours, planning ignoré');
+                return;
+            }
+
             if (!schedule || schedule.length === 0) {
                 console.log('⏰ Pas de planning défini');
                 // Si pas de planning, réinitialiser la playlist planifiée active
@@ -398,8 +406,21 @@
             const isPriority = data.priority || false;
 
             console.log('📺 Affichage du contenu manuel:', content.name);
+
+            // Arrêter toute playlist en cours
+            stopPlaylist();
+
+            // Annuler le timeout de contenu précédent s'il existe
+            if (contentTimeout) {
+                clearTimeout(contentTimeout);
+                contentTimeout = null;
+            }
+
             // Réinitialiser la playlist planifiée active (affichage manuel)
             activeScheduledPlaylistId = null;
+
+            // Marquer comme prioritaire si c'est le cas
+            isPriorityActive = isPriority;
 
             // Mettre à jour les infos de debug
             currentContentStartTime = Date.now();
@@ -431,8 +452,10 @@
             }
 
             if (content.duration > 0) {
-                setTimeout(() => {
+                contentTimeout = setTimeout(() => {
                     container.innerHTML = '<div class="waiting">Contenu terminé</div>';
+                    contentTimeout = null;
+                    isPriorityActive = false; // Fin du contenu prioritaire
                     // Si c'est un affichage prioritaire, notifier le serveur pour mettre à jour les infos
                     if (isPriority) {
                         socket.emit('clear_screen', { screen_id: screenId });
@@ -446,8 +469,14 @@
             document.getElementById('content-container').innerHTML =
                 '<div class="waiting">En attente de contenu...</div>';
             stopPlaylist();
+            // Annuler le timeout de contenu s'il existe
+            if (contentTimeout) {
+                clearTimeout(contentTimeout);
+                contentTimeout = null;
+            }
             // Réinitialiser la playlist planifiée active
             activeScheduledPlaylistId = null;
+            isPriorityActive = false; // Réinitialiser le flag prioritaire
             currentContentName = null;
             currentContentStartTime = null;
         });
@@ -455,12 +484,18 @@
         socket.on('start_playlist', (data) => {
             console.log('📋 Démarrage de la playlist manuelle:', data.name);
             stopPlaylist();
+            // Annuler le timeout de contenu s'il existe
+            if (contentTimeout) {
+                clearTimeout(contentTimeout);
+                contentTimeout = null;
+            }
             // Réinitialiser la playlist planifiée active (c'est une playlist manuelle)
             activeScheduledPlaylistId = null;
             currentPlaylist = data.items;
             currentPlaylistIndex = 0;
             currentPlaylistName = data.name; // Stocker le nom de la playlist
             currentPlaylistIsPriority = data.priority || false; // Stocker si c'est prioritaire
+            isPriorityActive = data.priority || false; // Marquer comme prioritaire si c'est le cas
             playNextInPlaylist();
         });
 
@@ -528,6 +563,7 @@
                     const container = document.getElementById('content-container');
                     container.innerHTML = '<div class="waiting">Contenu terminé</div>';
                     stopPlaylist();
+                    isPriorityActive = false; // Fin de la playlist prioritaire
                     // Notifier le serveur pour mettre à jour les infos
                     socket.emit('clear_screen', { screen_id: screenId });
                 } else {
