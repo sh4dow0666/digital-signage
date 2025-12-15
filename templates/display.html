@@ -453,12 +453,18 @@
 
             if (content.duration > 0) {
                 contentTimeout = setTimeout(() => {
-                    container.innerHTML = '<div class="waiting">Contenu terminé</div>';
                     contentTimeout = null;
                     isPriorityActive = false; // Fin du contenu prioritaire
-                    // Si c'est un affichage prioritaire, notifier le serveur pour mettre à jour les infos
+
+                    // Si c'est un affichage prioritaire
                     if (isPriority) {
+                        // Notifier le serveur pour mettre à jour les infos
                         socket.emit('clear_screen', { screen_id: screenId });
+                        // Reprendre le planning après la fin du contenu prioritaire
+                        checkSchedule();
+                    } else {
+                        // Pour les contenus non-prioritaires, afficher "Contenu terminé"
+                        container.innerHTML = '<div class="waiting">Contenu terminé</div>';
                     }
                 }, content.duration * 1000);
             }
@@ -560,12 +566,12 @@
                 // Si c'est une playlist prioritaire et qu'on a fini tous les éléments
                 if (currentPlaylistIsPriority && currentPlaylistIndex >= currentPlaylist.length) {
                     console.log('✅ Playlist prioritaire terminée');
-                    const container = document.getElementById('content-container');
-                    container.innerHTML = '<div class="waiting">Contenu terminé</div>';
                     stopPlaylist();
                     isPriorityActive = false; // Fin de la playlist prioritaire
                     // Notifier le serveur pour mettre à jour les infos
                     socket.emit('clear_screen', { screen_id: screenId });
+                    // Reprendre le planning après la fin de la playlist prioritaire
+                    checkSchedule();
                 } else {
                     // Playlist normale : boucler
                     currentPlaylistIndex = currentPlaylistIndex % currentPlaylist.length;
