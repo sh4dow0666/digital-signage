@@ -2114,7 +2114,7 @@
                 selectedScreens.forEach(screenId => {
                     socket.emit('display_content', {
                         screen_id: screenId,
-                        content: content
+                        content_id: contentId
                     });
                 });
                 alert(`✅ Contenu "${content.name}" envoyé en priorité sur ${selectedScreens.length} écran(s)`);
@@ -2123,7 +2123,7 @@
                 selectedScreens.forEach(screenId => {
                     socket.emit('start_playlist', {
                         screen_id: screenId,
-                        playlist: playlist
+                        playlist_id: playlistId
                     });
                 });
                 alert(`✅ Playlist "${playlist.name}" envoyée en priorité sur ${selectedScreens.length} écran(s)`);
