@@ -237,17 +237,35 @@
                         const wasPriority = currentPlaylistIsPriority;
                         const customDuration = currentPlaylistCustomDuration;
 
-                        // Simuler un nouvel événement start_playlist avec les nouveaux items
-                        stopPlaylist();
+                        // Arrêter SEULEMENT les timers, PAS les variables de debug
+                        if (playlistInterval) {
+                            clearTimeout(playlistInterval);
+                            playlistInterval = null;
+                        }
+                        if (playlistTotalDurationTimeout) {
+                            clearTimeout(playlistTotalDurationTimeout);
+                            playlistTotalDurationTimeout = null;
+                        }
+                        if (contentTimeout) {
+                            clearTimeout(contentTimeout);
+                            contentTimeout = null;
+                        }
 
-                        // Réappliquer le contexte
-                        isPriorityActive = wasPriority;
-                        currentPlaylistIsPriority = wasPriority;
+                        // Mettre à jour les variables AVANT de relancer (pour éviter les valeurs null)
                         currentPlaylist = updatedPlaylist.items;
                         currentPlaylistIndex = 0;
                         currentPlaylistName = updatedPlaylist.name;
-                        currentPlaylistId = updatedPlaylist.id;
+                        currentPlaylistId = currentPlaylistId; // Garder le même ID
                         currentPlaylistCustomDuration = customDuration;
+                        isPriorityActive = wasPriority;
+                        currentPlaylistIsPriority = wasPriority;
+
+                        console.log('   → Variables après mise à jour:', {
+                            currentPlaylistName,
+                            items: currentPlaylist.length,
+                            isPriority: wasPriority,
+                            customDuration
+                        });
 
                         // Si c'était prioritaire avec durée personnalisée, relancer le timer
                         if (wasPriority && customDuration && customDuration > 0) {
