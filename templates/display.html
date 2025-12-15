@@ -53,6 +53,7 @@
         let clockInterval = null; // Intervalle de mise à jour de l'horloge
         let currentPlaylistId = null; // ID de la playlist actuelle
         let playlistTotalDurationTimeout = null; // Timer pour la durée totale de la playlist prioritaire
+        let currentPlaylistCustomDuration = null; // Durée personnalisée de la playlist prioritaire en cours
 
         // Fonction pour mettre à jour l'horloge
         function updateClock() {
@@ -223,7 +224,7 @@
                 const updatedItemsJson = JSON.stringify(updatedPlaylist.items);
 
                 if (currentItemsJson !== updatedItemsJson) {
-                    console.log("   → La playlist en cours a été modifiée");
+                    console.log("   → La playlist en cours a été modifiée, rechargement...");
 
                     // Si c'est une playlist planifiée, la relancer depuis le début
                     if (activeScheduledPlaylistId !== null) {
@@ -231,9 +232,39 @@
                         stopPlaylist();
                         checkSchedule();
                     } else {
-                        // Pour les playlists manuelles/prioritaires, noter qu'il faut recharger
-                        // La mise à jour se fera automatiquement au prochain item
-                        console.log("   → Playlist manuelle/prioritaire, mise à jour au prochain item...");
+                        // Pour les playlists manuelles/prioritaires, les relancer avec les mêmes paramètres
+                        console.log("   → Playlist manuelle/prioritaire, relancement avec les nouveaux items...");
+                        const wasPriority = currentPlaylistIsPriority;
+                        const customDuration = currentPlaylistCustomDuration;
+
+                        // Simuler un nouvel événement start_playlist avec les nouveaux items
+                        stopPlaylist();
+
+                        // Réappliquer le contexte
+                        isPriorityActive = wasPriority;
+                        currentPlaylistIsPriority = wasPriority;
+                        currentPlaylist = updatedPlaylist.items;
+                        currentPlaylistIndex = 0;
+                        currentPlaylistName = updatedPlaylist.name;
+                        currentPlaylistId = updatedPlaylist.id;
+                        currentPlaylistCustomDuration = customDuration;
+
+                        // Si c'était prioritaire avec durée personnalisée, relancer le timer
+                        if (wasPriority && customDuration && customDuration > 0) {
+                            console.log(`   → Relancement du timer global de ${customDuration}s`);
+                            playlistTotalDurationTimeout = setTimeout(() => {
+                                console.log('⏰ DURÉE TOTALE ÉCOULÉE: Arrêt de la playlist prioritaire');
+                                document.getElementById('content-container').innerHTML = '<div class="waiting">En attente de contenu...</div>';
+                                stopPlaylist();
+                                isPriorityActive = false;
+                                socket.emit('clear_screen', { screen_id: screenId });
+                                console.log('⏰ Reprise du planning normal...');
+                                checkSchedule();
+                            }, customDuration * 1000);
+                        }
+
+                        // Relancer la lecture
+                        playNextInPlaylist();
                     }
                 }
             }
@@ -569,6 +600,7 @@
             currentPlaylistIndex = 0;
             currentPlaylistName = data.name; // Stocker le nom de la playlist
             currentPlaylistId = data.id; // Stocker l'ID de la playlist
+            currentPlaylistCustomDuration = data.custom_duration || null; // Stocker la durée personnalisée
 
             // Si c'est une playlist prioritaire avec durée personnalisée (durée TOTALE)
             if (isPriority && data.custom_duration && data.custom_duration > 0) {
@@ -623,14 +655,23 @@
 
                 if (currentItemsJson !== updatedItemsJson) {
                     console.log('🔄 Rechargement de la playlist mise à jour...');
+                    console.log('   → Ancienne playlist:', currentPlaylistName, '- Items:', currentPlaylist.length);
+                    console.log('   → Nouvelle playlist:', updatedPlaylist.name, '- Items:', updatedPlaylist.items.length);
+                    console.log('   → Index actuel:', currentPlaylistIndex);
+
                     currentPlaylist = updatedPlaylist.items;
                     currentPlaylistName = updatedPlaylist.name;
 
                     // Ajuster l'index si nécessaire
                     if (currentPlaylistIndex >= currentPlaylist.length) {
+                        console.log('   → Index ajusté de', currentPlaylistIndex, 'à 0 (playlist plus courte)');
                         currentPlaylistIndex = 0;
-                        console.log('   → Index ajusté à 0 (playlist plus courte)');
                     }
+
+                    console.log('   → Variables après mise à jour:');
+                    console.log('      - currentPlaylistName:', currentPlaylistName);
+                    console.log('      - currentPlaylist.length:', currentPlaylist.length);
+                    console.log('      - currentPlaylistIndex:', currentPlaylistIndex);
                 }
             }
 
@@ -726,6 +767,17 @@
                 current_duration: currentContentDuration,
                 is_priority_active: isPriorityActive // Affichage prioritaire en cours
             };
+
+            // Log pour debug si les valeurs sont null/undefined
+            if (!currentPlaylistName || !currentItemName) {
+                console.warn('⚠️ DEBUG INFO: Valeurs manquantes!', {
+                    currentPlaylistName,
+                    currentItemName,
+                    currentPlaylist_length: currentPlaylist.length,
+                    currentPlaylistIndex,
+                    currentContentName
+                });
+            }
 
             socket.emit('update_debug_info', debugInfo);
         }, 5000);
