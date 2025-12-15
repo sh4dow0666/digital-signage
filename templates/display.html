@@ -541,9 +541,12 @@
 
             // Si c'est une playlist prioritaire avec durée personnalisée, démarrer un timer global
             if (isPriority && data.custom_duration && data.custom_duration > 0) {
-                console.log(`⏱️ Durée totale personnalisée: ${data.custom_duration}s`);
+                console.log(`⏱️ PLAYLIST PRIORITAIRE: Durée totale personnalisée activée = ${data.custom_duration}s`);
                 playlistTotalDurationTimeout = setTimeout(() => {
-                    console.log('⏰ Durée totale de la playlist prioritaire écoulée');
+                    console.log('⏰ PLAYLIST PRIORITAIRE: Durée totale écoulée, arrêt de la playlist');
+                    // Effacer le contenu à l'écran
+                    document.getElementById('content-container').innerHTML = '<div class="waiting">En attente de contenu...</div>';
+                    // Arrêter la playlist
                     stopPlaylist();
                     isPriorityActive = false;
                     playlistTotalDurationTimeout = null;
@@ -552,6 +555,10 @@
                     // Reprendre le planning après la fin de la playlist prioritaire
                     checkSchedule();
                 }, data.custom_duration * 1000);
+            } else if (isPriority) {
+                console.log('⏱️ PLAYLIST PRIORITAIRE: Pas de durée personnalisée, durée par défaut des items');
+            } else {
+                console.log('📋 Playlist normale (non prioritaire)');
             }
 
             playNextInPlaylist();
@@ -619,11 +626,17 @@
 
             // Programmer le prochain contenu
             playlistInterval = setTimeout(() => {
+                // Vérifier que la playlist n'a pas été arrêtée entre-temps
+                if (currentPlaylist.length === 0) {
+                    console.log('⚠️ Playlist déjà arrêtée, annulation');
+                    return;
+                }
+
                 currentPlaylistIndex++;
 
                 // Si c'est une playlist prioritaire et qu'on a fini tous les éléments
                 if (currentPlaylistIsPriority && currentPlaylistIndex >= currentPlaylist.length) {
-                    console.log('✅ Playlist prioritaire terminée');
+                    console.log('✅ Playlist prioritaire terminée (tous les items joués)');
                     stopPlaylist();
                     isPriorityActive = false; // Fin de la playlist prioritaire
                     // Notifier le serveur pour mettre à jour les infos

@@ -974,6 +974,9 @@ def handle_start_playlist(data):
     playlist = playlists[playlist_id]
     screens[screen_id]['current_content'] = f"Playlist: {playlist['name']}"
 
+    # Log pour debug
+    print(f"🔵 START_PLAYLIST: screen={screen_id}, playlist={playlist['name']}, priority={priority}, custom_duration={custom_duration}")
+
     # Envoyer la durée personnalisée comme propriété de la playlist, pas des items
     emit('start_playlist', {
         'name': playlist['name'],
