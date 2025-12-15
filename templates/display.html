@@ -52,6 +52,7 @@
         let showClock = false; // Affichage de l'horloge
         let clockInterval = null; // Intervalle de mise à jour de l'horloge
         let currentPlaylistId = null; // ID de la playlist actuelle
+        let playlistTotalDurationTimeout = null; // Timer pour la durée totale de la playlist prioritaire
 
         // Fonction pour mettre à jour l'horloge
         function updateClock() {
@@ -502,6 +503,11 @@
                 clearTimeout(contentTimeout);
                 contentTimeout = null;
             }
+            // Annuler le timer de durée totale de playlist s'il existe
+            if (playlistTotalDurationTimeout) {
+                clearTimeout(playlistTotalDurationTimeout);
+                playlistTotalDurationTimeout = null;
+            }
             // Réinitialiser la playlist planifiée active
             activeScheduledPlaylistId = null;
             isPriorityActive = false; // Réinitialiser le flag prioritaire
@@ -532,6 +538,22 @@
             currentPlaylistIndex = 0;
             currentPlaylistName = data.name; // Stocker le nom de la playlist
             currentPlaylistId = data.id; // Stocker l'ID de la playlist
+
+            // Si c'est une playlist prioritaire avec durée personnalisée, démarrer un timer global
+            if (isPriority && data.custom_duration && data.custom_duration > 0) {
+                console.log(`⏱️ Durée totale personnalisée: ${data.custom_duration}s`);
+                playlistTotalDurationTimeout = setTimeout(() => {
+                    console.log('⏰ Durée totale de la playlist prioritaire écoulée');
+                    stopPlaylist();
+                    isPriorityActive = false;
+                    playlistTotalDurationTimeout = null;
+                    // Notifier le serveur pour mettre à jour les infos
+                    socket.emit('clear_screen', { screen_id: screenId });
+                    // Reprendre le planning après la fin de la playlist prioritaire
+                    checkSchedule();
+                }, data.custom_duration * 1000);
+            }
+
             playNextInPlaylist();
         });
 
@@ -540,6 +562,11 @@
                 clearTimeout(playlistInterval);
                 playlistInterval = null;
                 console.log('⏹️ Playlist arrêtée');
+            }
+            // Annuler le timer de durée totale s'il existe
+            if (playlistTotalDurationTimeout) {
+                clearTimeout(playlistTotalDurationTimeout);
+                playlistTotalDurationTimeout = null;
             }
             currentPlaylist = [];
             currentPlaylistIndex = 0;
