@@ -976,24 +976,16 @@ def handle_start_playlist(data):
 
     # Log pour debug
     print(f"🔵 START_PLAYLIST: screen={screen_id}, playlist={playlist['name']}, priority={priority}, custom_duration={custom_duration}")
-
-    # Si c'est un affichage prioritaire avec durée personnalisée, modifier la durée de CHAQUE item
-    items_to_send = playlist['items']
     if priority and custom_duration is not None and custom_duration > 0:
-        items_to_send = []
-        for item in playlist['items']:
-            item_copy = {
-                'content': item['content'].copy(),
-                'duration': custom_duration  # Appliquer la durée personnalisée à cet item
-            }
-            items_to_send.append(item_copy)
-        print(f"   ✅ Durée personnalisée appliquée: {custom_duration}s par item ({len(items_to_send)} items)")
+        print(f"   ⏱️ Durée TOTALE de la playlist: {custom_duration}s")
 
+    # Envoyer les items avec leur durée normale + la durée totale personnalisée
     emit('start_playlist', {
         'id': playlist_id,
         'name': playlist['name'],
-        'items': items_to_send,
-        'priority': priority
+        'items': playlist['items'],
+        'priority': priority,
+        'custom_duration': custom_duration  # Durée TOTALE de la playlist
     }, room=screens[screen_id]['sid'])
     
     emit('state_update', {

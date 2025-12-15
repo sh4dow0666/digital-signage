@@ -522,6 +522,7 @@
             console.log('📋 Démarrage de la playlist manuelle:', data.name);
             console.log('🔍 DEBUG DATA REÇUES:', {
                 priority: data.priority,
+                custom_duration: data.custom_duration,
                 has_items: data.items ? data.items.length : 0,
                 first_item_duration: data.items && data.items[0] ? data.items[0].duration : 'N/A'
             });
@@ -544,8 +545,24 @@
             currentPlaylistName = data.name; // Stocker le nom de la playlist
             currentPlaylistId = data.id; // Stocker l'ID de la playlist
 
-            if (isPriority) {
-                console.log('⏱️ PLAYLIST PRIORITAIRE: Chaque item utilisera sa durée modifiée');
+            // Si c'est une playlist prioritaire avec durée personnalisée (durée TOTALE)
+            if (isPriority && data.custom_duration && data.custom_duration > 0) {
+                console.log(`⏱️ PLAYLIST PRIORITAIRE: Timer global de ${data.custom_duration}s démarré`);
+                playlistTotalDurationTimeout = setTimeout(() => {
+                    console.log('⏰ DURÉE TOTALE ÉCOULÉE: Arrêt de la playlist prioritaire');
+                    // Effacer le contenu à l'écran
+                    document.getElementById('content-container').innerHTML = '<div class="waiting">En attente de contenu...</div>';
+                    // Arrêter la playlist
+                    stopPlaylist();
+                    isPriorityActive = false;
+                    // Notifier le serveur pour mettre à jour les infos
+                    socket.emit('clear_screen', { screen_id: screenId });
+                    // Reprendre le planning après la fin de la playlist prioritaire
+                    console.log('⏰ Reprise du planning normal...');
+                    checkSchedule();
+                }, data.custom_duration * 1000);
+            } else if (isPriority) {
+                console.log('⏱️ PLAYLIST PRIORITAIRE: Pas de timer global, durée par défaut des items');
             } else {
                 console.log('📋 Playlist normale (non prioritaire)');
             }
