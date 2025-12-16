@@ -385,9 +385,19 @@ def create_admin():
 # ===== FIN ROUTES D'AUTHENTIFICATION =====
 
 @app.route('/')
-@login_required
 def index():
-    """Route racine qui redirige vers le manager"""
+    """Route racine qui vérifie s'il faut créer un admin ou se connecter"""
+    users = load_users()
+
+    # Si aucun utilisateur n'existe, rediriger vers la création admin
+    if not users:
+        return redirect(url_for('create_admin'))
+
+    # Si pas connecté, rediriger vers login
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
+    # Sinon, rediriger vers le manager
     return redirect(url_for('manager'))
 
 @app.route('/manager')
