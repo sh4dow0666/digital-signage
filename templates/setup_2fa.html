@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration 2FA - DS MCO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .setup-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .setup-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .setup-header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .setup-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .qr-section {
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .qr-section img {
+            max-width: 250px;
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .secret-key {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #1976d2;
+        }
+
+        .secret-key label {
+            display: block;
+            color: #1976d2;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .secret-key code {
+            display: block;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            letter-spacing: 2px;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .instructions {
+            background: #fff9c4;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f57c00;
+        }
+
+        .instructions h3 {
+            color: #f57c00;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .instructions ol {
+            color: #666;
+            font-size: 14px;
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            text-align: center;
+            letter-spacing: 5px;
+            font-size: 18px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 10px 20px rgba(108, 117, 125, 0.4);
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c33;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: #efe;
+            color: #3c3;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3c3;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="setup-header">
+            <h1>🔐 Configuration 2FA</h1>
+            <p>Double Authentification avec Google Authenticator</p>
+        </div>
+
+        {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        {% if success %}
+        <div class="success-message">
+            {{ success }}
+        </div>
+        {% endif %}
+
+        <div class="instructions">
+            <h3>📱 Instructions</h3>
+            <ol>
+                <li>Téléchargez Google Authenticator sur votre téléphone</li>
+                <li>Scannez le QR code ci-dessous avec l'application</li>
+                <li>Entrez le code à 6 chiffres généré pour activer la 2FA</li>
+            </ol>
+        </div>
+
+        <div class="qr-section">
+            <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+        </div>
+
+        <div class="secret-key">
+            <label>Clé secrète (sauvegardez-la en lieu sûr):</label>
+            <code>{{ secret_key }}</code>
+        </div>
+
+        <form method="POST" action="{{ url_for('setup_2fa') }}">
+            <div class="form-group">
+                <label for="totp_code">Code de vérification</label>
+                <input type="text" id="totp_code" name="totp_code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required autofocus>
+            </div>
+
+            <button type="submit" class="btn">Activer la 2FA</button>
+            <a href="{{ url_for('index') }}"><button type="button" class="btn btn-secondary">Plus tard</button></a>
+        </form>
+    </div>
+</body>
+</html>

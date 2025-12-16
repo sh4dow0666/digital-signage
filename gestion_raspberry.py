@@ -4,9 +4,10 @@ Interface web pour contrôler plusieurs écrans à distance
 VERSION CORRIGÉE - Playlists fonctionnelles
 """
 
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for
 from flask_socketio import SocketIO, emit
 from werkzeug.utils import secure_filename
+from functools import wraps
 import json
 import os
 from datetime import datetime
@@ -14,6 +15,11 @@ import requests
 import re
 import isodate
 import subprocess
+import bcrypt
+import pyotp
+import qrcode
+import io
+import base64
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'votre-cle-secrete-ici'
@@ -26,6 +32,7 @@ SCREENS_FILE = os.path.join(DATA_DIR, 'screens.json')
 CONTENT_FILE = os.path.join(DATA_DIR, 'content.json')
 PLAYLISTS_FILE = os.path.join(DATA_DIR, 'playlists.json')
 SCHEDULES_FILE = os.path.join(DATA_DIR, 'schedules.json')
+USERS_FILE = os.path.join(DATA_DIR, 'users.json')
 
 # Dossier pour les uploads
 UPLOAD_DIR = os.path.join('static', 'uploads')
@@ -38,6 +45,102 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 def allowed_file(filename):
     """Vérifie si l'extension du fichier est autorisée"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# ===== GESTION UTILISATEURS ET AUTHENTIFICATION =====
+
+def load_users():
+    """Charge les utilisateurs depuis le fichier"""
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"⚠️ Erreur lors du chargement des utilisateurs: {e}")
+    return []
+
+def save_users(users):
+    """Sauvegarde les utilisateurs dans le fichier"""
+    try:
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(users, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        print(f"⚠️ Erreur lors de la sauvegarde des utilisateurs: {e}")
+        return False
+
+def create_user(username, password):
+    """Crée un nouvel utilisateur avec un mot de passe haché"""
+    users = load_users()
+
+    # Vérifier si l'utilisateur existe déjà
+    if any(u['username'] == username for u in users):
+        return None, "L'utilisateur existe déjà"
+
+    # Hasher le mot de passe
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    # Générer un secret pour 2FA
+    totp_secret = pyotp.random_base32()
+
+    user = {
+        'username': username,
+        'password_hash': password_hash,
+        'totp_secret': totp_secret,
+        '2fa_enabled': False,
+        'created_at': datetime.now().isoformat()
+    }
+
+    users.append(user)
+    save_users(users)
+
+    return user, None
+
+def verify_password(username, password):
+    """Vérifie le mot de passe d'un utilisateur"""
+    users = load_users()
+    user = next((u for u in users if u['username'] == username), None)
+
+    if not user:
+        return False
+
+    return bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8'))
+
+def verify_totp(username, token):
+    """Vérifie le code TOTP (Google Authenticator)"""
+    users = load_users()
+    user = next((u for u in users if u['username'] == username), None)
+
+    if not user or not user.get('2fa_enabled'):
+        return True  # Si 2FA n'est pas activé, considérer comme valide
+
+    totp = pyotp.TOTP(user['totp_secret'])
+    return totp.verify(token, valid_window=1)
+
+def enable_2fa(username):
+    """Active la 2FA pour un utilisateur"""
+    users = load_users()
+    for user in users:
+        if user['username'] == username:
+            user['2fa_enabled'] = True
+            save_users(users)
+            return True
+    return False
+
+def get_user(username):
+    """Récupère un utilisateur par son nom"""
+    users = load_users()
+    return next((u for u in users if u['username'] == username), None)
+
+def login_required(f):
+    """Decorator pour protéger les routes nécessitant une authentification"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# ===== FIN GESTION UTILISATEURS =====
 
 # Stockage en mémoire
 screens = {}
@@ -152,7 +255,143 @@ def save_schedules():
 # Charger les données au démarrage
 load_data()
 
+# ===== ROUTES D'AUTHENTIFICATION =====
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Page de connexion avec support 2FA"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        totp_code = request.form.get('totp_code')
+
+        # Étape 1: Vérification username + password
+        if not totp_code:
+            if verify_password(username, password):
+                user = get_user(username)
+                if user and user.get('2fa_enabled'):
+                    # 2FA activé, demander le code
+                    session['pending_username'] = username
+                    return render_template('login.html', show_2fa_step=True, info="Entrez votre code d'authentification")
+                else:
+                    # Pas de 2FA, connexion directe
+                    session['username'] = username
+                    return redirect(url_for('index'))
+            else:
+                return render_template('login.html', error="Nom d'utilisateur ou mot de passe incorrect")
+
+        # Étape 2: Vérification du code 2FA
+        else:
+            pending_username = session.get('pending_username')
+            if not pending_username:
+                return render_template('login.html', error="Session expirée, veuillez recommencer")
+
+            if verify_totp(pending_username, totp_code):
+                session['username'] = pending_username
+                session.pop('pending_username', None)
+                return redirect(url_for('index'))
+            else:
+                return render_template('login.html', show_2fa_step=True, error="Code d'authentification incorrect")
+
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Déconnexion"""
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route('/setup_2fa', methods=['GET', 'POST'])
+@login_required
+def setup_2fa():
+    """Configuration de la double authentification"""
+    username = session.get('username')
+    user = get_user(username)
+
+    if not user:
+        return redirect(url_for('login'))
+
+    # Générer le QR code
+    totp_uri = pyotp.totp.TOTP(user['totp_secret']).provisioning_uri(
+        name=username,
+        issuer_name='DS MCO'
+    )
+
+    # Créer le QR code en base64
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(totp_uri)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    # Convertir en base64
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+    if request.method == 'POST':
+        totp_code = request.form.get('totp_code')
+
+        if verify_totp(username, totp_code):
+            enable_2fa(username)
+            return render_template('setup_2fa.html',
+                                   qr_code=qr_base64,
+                                   secret_key=user['totp_secret'],
+                                   success="✅ Double authentification activée avec succès!")
+        else:
+            return render_template('setup_2fa.html',
+                                   qr_code=qr_base64,
+                                   secret_key=user['totp_secret'],
+                                   error="Code incorrect, veuillez réessayer")
+
+    return render_template('setup_2fa.html',
+                           qr_code=qr_base64,
+                           secret_key=user['totp_secret'])
+
+@app.route('/create_admin', methods=['GET', 'POST'])
+def create_admin():
+    """Création du premier utilisateur administrateur"""
+    users = load_users()
+
+    # Si des utilisateurs existent déjà, rediriger vers login
+    if users:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        password_confirm = request.form.get('password_confirm')
+
+        if not username or not password:
+            return render_template('create_admin.html', error="Veuillez remplir tous les champs")
+
+        if password != password_confirm:
+            return render_template('create_admin.html', error="Les mots de passe ne correspondent pas")
+
+        if len(password) < 8:
+            return render_template('create_admin.html', error="Le mot de passe doit contenir au moins 8 caractères")
+
+        user, error = create_user(username, password)
+
+        if error:
+            return render_template('create_admin.html', error=error)
+
+        # Connexion automatique et redirection vers setup 2FA
+        session['username'] = username
+        return redirect(url_for('setup_2fa'))
+
+    return render_template('create_admin.html')
+
+# ===== FIN ROUTES D'AUTHENTIFICATION =====
+
 @app.route('/')
+@login_required
+def index():
+    """Route racine qui redirige vers le manager"""
+    return redirect(url_for('manager'))
+
+@app.route('/manager')
+@login_required
 def manager():
     """Interface de gestion"""
     return render_template("manager.html")
