@@ -312,7 +312,7 @@ def setup_2fa():
         return redirect(url_for('login'))
 
     # Générer le QR code
-    totp_uri = pyotp.totp.TOTP(user['totp_secret']).provisioning_uri(
+    totp_uri = pyotp.TOTP(user['totp_secret']).provisioning_uri(
         name=username,
         issuer_name='DS MCO'
     )

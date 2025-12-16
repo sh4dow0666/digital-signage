@@ -210,7 +210,7 @@
             <div id="step2">
                 <div class="form-group">
                     <label for="totp_code">Code d'authentification (6 chiffres)</label>
-                    <input type="text" id="totp_code" name="totp_code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required>
+                    <input type="text" id="totp_code" name="totp_code" maxlength="6" pattern="[0-9]{6}" placeholder="000000">
                 </div>
 
                 <button type="submit" class="btn">Vérifier</button>
@@ -222,12 +222,30 @@
         </form>
     </div>
 
-    {% if show_2fa_step %}
     <script>
-        document.getElementById('step1').classList.remove('active');
-        document.getElementById('step2').classList.add('active');
-        document.getElementById('totp_code').focus();
+        // Gérer l'attribut required selon l'étape active
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const totpInput = document.getElementById('totp_code');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+
+        {% if show_2fa_step %}
+        // Afficher l'étape 2FA
+        step1.classList.remove('active');
+        step2.classList.add('active');
+        usernameInput.removeAttribute('required');
+        passwordInput.removeAttribute('required');
+        totpInput.setAttribute('required', 'required');
+        totpInput.focus();
+        {% else %}
+        // Afficher l'étape 1
+        step1.classList.add('active');
+        step2.classList.remove('active');
+        usernameInput.setAttribute('required', 'required');
+        passwordInput.setAttribute('required', 'required');
+        totpInput.removeAttribute('required');
+        {% endif %}
     </script>
-    {% endif %}
 </body>
 </html>
