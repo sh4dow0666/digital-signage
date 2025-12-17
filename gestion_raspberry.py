@@ -334,10 +334,8 @@ def setup_2fa():
 
         if verify_totp(username, totp_code):
             enable_2fa(username)
-            return render_template('setup_2fa.html',
-                                   qr_code=qr_base64,
-                                   secret_key=user['totp_secret'],
-                                   success="✅ Double authentification activée avec succès!")
+            # Rediriger vers l'index après activation réussie
+            return redirect(url_for('index'))
         else:
             return render_template('setup_2fa.html',
                                    qr_code=qr_base64,
