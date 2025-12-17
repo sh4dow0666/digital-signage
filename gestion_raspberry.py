@@ -994,15 +994,16 @@ def delete_user_api(username):
 @login_required
 def toggle_2fa_api(username):
     """Active ou désactive la 2FA pour un utilisateur"""
-    # Vérifier que l'utilisateur ne peut modifier que sa propre 2FA
-    if session.get('username') != username:
-        return jsonify({
-            'success': False,
-            'error': 'Vous ne pouvez modifier la 2FA que pour votre propre compte'
-        }), 403
-
     data = request.json
     enable = data.get('enable', False)
+
+    # Vérifier que seul l'utilisateur lui-même peut ACTIVER sa 2FA
+    # Mais tout le monde peut DÉSACTIVER la 2FA de n'importe quel utilisateur
+    if enable and session.get('username') != username:
+        return jsonify({
+            'success': False,
+            'error': 'Vous ne pouvez activer la 2FA que pour votre propre compte'
+        }), 403
 
     if toggle_user_2fa(username, enable):
         status = 'activée' if enable else 'désactivée'

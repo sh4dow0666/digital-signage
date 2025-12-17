@@ -2009,10 +2009,16 @@
                                 </div>
                             </div>
                             <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                ${isCurrentUser ? `
-                                    <button onclick="toggleUser2FA('${user.username}', ${!user['2fa_enabled']})"
-                                            style="padding: 6px 12px; border: none; border-radius: 25px; cursor: pointer; font-size: 0.9em; background: ${user['2fa_enabled'] ? '#ffc107' : '#28a745'}; color: white;">
-                                        ${user['2fa_enabled'] ? '🔓 Désactiver 2FA' : '🔒 Activer 2FA'}
+                                ${isCurrentUser && !user['2fa_enabled'] ? `
+                                    <button onclick="toggleUser2FA('${user.username}', true)"
+                                            style="padding: 6px 12px; border: none; border-radius: 25px; cursor: pointer; font-size: 0.9em; background: #28a745; color: white;">
+                                        🔒 Activer 2FA
+                                    </button>
+                                ` : ''}
+                                ${user['2fa_enabled'] ? `
+                                    <button onclick="toggleUser2FA('${user.username}', false)"
+                                            style="padding: 6px 12px; border: none; border-radius: 25px; cursor: pointer; font-size: 0.9em; background: #ffc107; color: white;">
+                                        🔓 Désactiver 2FA
                                     </button>
                                 ` : ''}
                                 <button onclick="openEditUserModal('${user.username}')"
