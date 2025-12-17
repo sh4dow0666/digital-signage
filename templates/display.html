@@ -331,15 +331,16 @@
 
                 console.log('⚙️ Configuration mise à jour:', { defaultContentId, idleBehavior, showClock: data.show_clock });
 
-                // Si aucune playlist planifiée n'est active, forcer l'affichage du contenu par défaut
-                if (activeScheduledPlaylistId === null) {
-                    console.log('   → Aucune playlist planifiée active, application immédiate de la config');
+                // Si aucune playlist planifiée n'est active ET qu'il n'y a pas de contenu prioritaire
+                if (activeScheduledPlaylistId === null && !isPriorityActive) {
+                    console.log('   → Aucune playlist planifiée/prioritaire active, application immédiate de la config');
                     // Arrêter toute playlist en cours (manuelle ou ancienne)
                     stopPlaylist();
                     // Afficher le contenu par défaut
                     showDefaultContent();
                 } else {
-                    // Si une playlist planifiée est active, juste vérifier l'état
+                    // Si une playlist planifiée ou prioritaire est active, ne rien toucher
+                    console.log('   → Playlist planifiée ou contenu prioritaire actif, config appliquée sans interruption');
                     console.log('   → Playlist planifiée active, vérification du planning');
                     checkSchedule();
                 }
