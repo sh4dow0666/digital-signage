@@ -141,6 +141,30 @@ def update_user_password(username, new_password):
             return True
     return False
 
+def update_user(old_username, new_username=None, new_password=None):
+    """Met à jour le nom d'utilisateur et/ou le mot de passe d'un utilisateur"""
+    users = load_users()
+
+    # Vérifier si le nouveau nom d'utilisateur existe déjà (si différent de l'ancien)
+    if new_username and new_username != old_username:
+        if any(u['username'] == new_username for u in users):
+            return False, "Ce nom d'utilisateur est déjà utilisé"
+
+    for user in users:
+        if user['username'] == old_username:
+            # Mettre à jour le nom d'utilisateur si fourni
+            if new_username and new_username != old_username:
+                user['username'] = new_username
+
+            # Mettre à jour le mot de passe si fourni
+            if new_password:
+                user['password_hash'] = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+            save_users(users)
+            return True, new_username if new_username else old_username
+
+    return False, "Utilisateur introuvable"
+
 def delete_user(username):
     """Supprime un utilisateur"""
     users = load_users()
@@ -932,32 +956,59 @@ def create_user_api():
 @app.route('/api/users/<username>', methods=['PUT'])
 @login_required
 def update_user_api(username):
-    """Met à jour un utilisateur (mot de passe uniquement)"""
+    """Met à jour un utilisateur (nom d'utilisateur et/ou mot de passe)"""
     data = request.json
+    new_username = data.get('username', '').strip()
     new_password = data.get('password', '')
 
-    if not new_password:
+    # Au moins un champ doit être fourni
+    if not new_username and not new_password:
         return jsonify({
             'success': False,
-            'error': 'Nouveau mot de passe requis'
+            'error': 'Nouveau nom d\'utilisateur ou mot de passe requis'
         }), 400
 
-    if len(new_password) < 8:
+    # Valider le nouveau nom d'utilisateur si fourni
+    if new_username and len(new_username) == 0:
+        return jsonify({
+            'success': False,
+            'error': 'Le nom d\'utilisateur ne peut pas être vide'
+        }), 400
+
+    # Valider le nouveau mot de passe si fourni
+    if new_password and len(new_password) < 8:
         return jsonify({
             'success': False,
             'error': 'Le mot de passe doit contenir au moins 8 caractères'
         }), 400
 
-    if update_user_password(username, new_password):
+    success, result = update_user(
+        username,
+        new_username if new_username else None,
+        new_password if new_password else None
+    )
+
+    if success:
+        # Si l'utilisateur a modifié son propre nom d'utilisateur, mettre à jour la session
+        if session.get('username') == username and new_username and new_username != username:
+            session['username'] = result
+
+        changes = []
+        if new_username and new_username != username:
+            changes.append(f'nom d\'utilisateur → {result}')
+        if new_password:
+            changes.append('mot de passe')
+
         return jsonify({
             'success': True,
-            'message': f'Mot de passe de {username} mis à jour'
+            'message': f'Modifications effectuées : {", ".join(changes)}',
+            'new_username': result
         })
     else:
         return jsonify({
             'success': False,
-            'error': 'Utilisateur introuvable'
-        }), 404
+            'error': result
+        }), 400
 
 @app.route('/api/users/<username>', methods=['DELETE'])
 @login_required

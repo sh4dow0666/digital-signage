@@ -68,7 +68,8 @@ apt-get install -y \
     hostapd \
     dnsmasq \
     dhcpcd5 \
-    git
+    git \
+    fail2ban
 
 # Désactiver hostapd et dnsmasq par défaut (seront activés si besoin)
 # D'abord unmask si nécessaire, puis arrêter et désactiver
@@ -78,6 +79,7 @@ systemctl stop hostapd 2>/dev/null || true
 systemctl stop dnsmasq 2>/dev/null || true
 systemctl disable hostapd 2>/dev/null || true
 systemctl disable dnsmasq 2>/dev/null || true
+systemctl enable fail2ban --now
 
 echo -e "${YELLOW}📦 Installation des dépendances Python...${NC}"
 pip3 install flask flask-socketio python-socketio requests isodate pyotp qrcode pillow --break-system-packages
@@ -153,6 +155,28 @@ chmod -R 755 $INSTALL_DIR/raspberry/scripts
 echo -e "${YELLOW}📱 Installation du script de maintenance...${NC}"
 cp $INSTALL_DIR/raspberry/scripts/maintenance.sh /usr/local/bin/ds-maintenance
 chmod +x /usr/local/bin/ds-maintenance
+
+echo -e "${YELLOW}🚀 Configuration de fail2ban...${NC}"
+awk '
+BEGIN { in_sshd=0 }
+/^\[sshd\]/ {
+    print "[sshd]"
+    print "enabled = true"
+    print "port    = ssh"
+    print "logpath = %(sshd_log)s"
+    print "backend = %(sshd_backend)s"
+    print "maxretry = 5"
+    print "bantime  = 1h"
+    print "findtime = 10m"
+    in_sshd=1
+    next
+}
+/^\[/ {
+    if (in_sshd) in_sshd=0
+}
+!in_sshd
+' "/etc/fail2ban/jail.conf" > "/etc/fail2ban/jail.local"
+systemctl restart fail2ban
 
 echo ""
 echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
