@@ -351,7 +351,7 @@
                     <!-- Section Gestion des Utilisateurs -->
                     <h3 style="color: #667eea; margin-bottom: 15px;">👥 Gestion des Utilisateurs</h3>
 
-                    <div id="users-list-container" style="margin-bottom: 20px;">
+                    <div id="users-list-container" style="margin-bottom: 20px; border: 1px solid #e0e0e0;border-radius: 8px;padding: 10px;background: #fafafa; max-height: 250px; overflow-y: auto;">
                         <!-- La liste des utilisateurs sera chargée ici -->
                     </div>
 
@@ -1995,11 +1995,11 @@
 
             currentUsers.forEach(user => {
                 const isCurrentUser = user.username === currentUserUsername;
-                const twoFAStatus = user['2fa_enabled'] ? '🔒 2FA activée' : '🔓 2FA désactivée';
+                const twoFAStatus = user['2fa_enabled'] ? '🔒' : '🔓';
                 const twoFAColor = user['2fa_enabled'] ? '#28a745' : '#ffc107';
 
                 html += `
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid ${isCurrentUser ? '#667eea' : '#dee2e6'};">
+                    <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid ${isCurrentUser ? '#667eea' : '#dee2e6'};">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <div style="flex: 1; min-width: 200px;">
                                 <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 5px;">
@@ -2012,10 +2012,12 @@
                                 </div>
                             </div>
                             <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                <button onclick="toggleUser2FA('${user.username}', ${!user['2fa_enabled']})"
-                                        style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: ${user['2fa_enabled'] ? '#ffc107' : '#28a745'}; color: white;">
-                                    ${user['2fa_enabled'] ? '🔓 Désactiver 2FA' : '🔒 Activer 2FA'}
-                                </button>
+                                ${isCurrentUser ? `
+                                    <button onclick="toggleUser2FA('${user.username}', ${!user['2fa_enabled']})"
+                                            style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: ${user['2fa_enabled'] ? '#ffc107' : '#28a745'}; color: white;">
+                                        ${user['2fa_enabled'] ? '🔓 Désactiver 2FA' : '🔒 Activer 2FA'}
+                                    </button>
+                                ` : ''}
                                 <button onclick="openEditUserModal('${user.username}')"
                                         style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: #007bff; color: white;">
                                     ✏️ Modifier
