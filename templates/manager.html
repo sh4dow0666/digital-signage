@@ -43,6 +43,42 @@
             </div>
         </header>
 
+        <!-- Messages Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div id="flash-messages" style="position: fixed; top: 20px; right: 20px; z-index: 10000; max-width: 400px;">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}" style="background: {% if category == 'success' %}#d4edda{% elif category == 'error' %}#f8d7da{% else %}#d1ecf1{% endif %}; color: {% if category == 'success' %}#155724{% elif category == 'error' %}#721c24{% else %}#0c5460{% endif %}; padding: 15px 20px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-left: 4px solid {% if category == 'success' %}#28a745{% elif category == 'error' %}#dc3545{% else %}#17a2b8{% endif %}; animation: slideInRight 0.5s ease-out;">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+                <style>
+                    @keyframes slideInRight {
+                        from {
+                            opacity: 0;
+                            transform: translateX(100px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateX(0);
+                        }
+                    }
+                </style>
+                <script>
+                    // Faire disparaître les messages après 5 secondes
+                    setTimeout(() => {
+                        const flashMessages = document.getElementById('flash-messages');
+                        if (flashMessages) {
+                            flashMessages.style.transition = 'opacity 0.5s';
+                            flashMessages.style.opacity = '0';
+                            setTimeout(() => flashMessages.remove(), 500);
+                        }
+                    }, 5000);
+                </script>
+            {% endif %}
+        {% endwith %}
+
         <!-- Modal Gestion Globale Playlists -->
         <div id="global-playlist-modal" class="modal">
             <div class="modal-content">

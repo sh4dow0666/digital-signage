@@ -4,7 +4,7 @@ Interface web pour contrôler plusieurs écrans à distance
 VERSION CORRIGÉE - Playlists fonctionnelles
 """
 
-from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for, flash
 from flask_socketio import SocketIO, emit
 from werkzeug.utils import secure_filename
 from functools import wraps
@@ -334,6 +334,8 @@ def setup_2fa():
 
         if verify_totp(username, totp_code):
             enable_2fa(username)
+            # Ajouter un message de succès
+            flash('✅ Double authentification activée avec succès!', 'success')
             # Rediriger vers l'index après activation réussie
             return redirect(url_for('index'))
         else:
