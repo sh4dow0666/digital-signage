@@ -2042,13 +2042,18 @@
                 const isCurrentUser = user.username === currentUserUsername;
                 const twoFAStatus = user['2fa_enabled'] ? '🔒' : '🔓';
                 const twoFAColor = user['2fa_enabled'] ? '#28a745' : '#ffc107';
+                username_text = user.username;
+                // tronquer le nom d'utilisateur s'il est plus long que 7 caractères
+                if (user.username.length > 7) {
+                    username_text = `<span title="${user.username}">${user.username.substring(0, 7)}...</span>`;
+                }
 
                 html += `
                     <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid ${isCurrentUser ? '#667eea' : '#dee2e6'};">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <div style="flex: 1; min-width: 180px;">
                                 <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 5px;">
-                                    ${user.username}
+                                    ${username_text}
                                     <span style="color: ${twoFAColor}; font-weight: 600;">${twoFAStatus}</span>
                                     ${isCurrentUser ? '<span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 25px; font-size: 0.8em; margin-left: 0px;">Vous</span>' : ''}
                                 </div>
