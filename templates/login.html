@@ -210,7 +210,7 @@
             <div id="step2">
                 <div class="form-group">
                     <label for="totp_code">Code d'authentification (6 chiffres)</label>
-                    <input type="text" id="totp_code" name="totp_code" maxlength="6" pattern="[0-9]{6}" placeholder="000000">
+                    <input type="text" id="totp_code" name="totp_code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" disabled>
                 </div>
 
                 <button type="submit" class="btn">Vérifier</button>
@@ -223,7 +223,7 @@
     </div>
 
     <script>
-        // Gérer l'attribut required selon l'étape active
+        // Gérer l'attribut disabled selon l'étape active
         const step1 = document.getElementById('step1');
         const step2 = document.getElementById('step2');
         const totpInput = document.getElementById('totp_code');
@@ -234,17 +234,21 @@
         // Afficher l'étape 2FA
         step1.classList.remove('active');
         step2.classList.add('active');
-        usernameInput.removeAttribute('required');
-        passwordInput.removeAttribute('required');
-        totpInput.setAttribute('required', 'required');
+        usernameInput.disabled = true;
+        passwordInput.disabled = true;
+        totpInput.disabled = false;
+        totpInput.required = true;
         totpInput.focus();
         {% else %}
         // Afficher l'étape 1
         step1.classList.add('active');
         step2.classList.remove('active');
-        usernameInput.setAttribute('required', 'required');
-        passwordInput.setAttribute('required', 'required');
-        totpInput.removeAttribute('required');
+        usernameInput.disabled = false;
+        passwordInput.disabled = false;
+        usernameInput.required = true;
+        passwordInput.required = true;
+        totpInput.disabled = true;
+        totpInput.required = false;
         {% endif %}
     </script>
 </body>
