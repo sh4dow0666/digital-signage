@@ -153,10 +153,9 @@ def toggle_user_2fa(username, enable):
     users = load_users()
     for user in users:
         if user['username'] == username:
+            # Toujours générer un nouveau secret (que ce soit pour activer ou désactiver)
+            user['totp_secret'] = pyotp.random_base32()
             user['2fa_enabled'] = enable
-            # Si on désactive, on peut optionnellement générer un nouveau secret
-            if not enable:
-                user['totp_secret'] = pyotp.random_base32()
             save_users(users)
             return True
     return False
@@ -996,6 +995,7 @@ def toggle_2fa_api(username):
     """Active ou désactive la 2FA pour un utilisateur"""
     data = request.json
     enable = data.get('enable', False)
+    totp_code = data.get('totp_code', '')
 
     # Vérifier que seul l'utilisateur lui-même peut ACTIVER sa 2FA
     # Mais tout le monde peut DÉSACTIVER la 2FA de n'importe quel utilisateur
@@ -1005,17 +1005,84 @@ def toggle_2fa_api(username):
             'error': 'Vous ne pouvez activer la 2FA que pour votre propre compte'
         }), 403
 
-    if toggle_user_2fa(username, enable):
-        status = 'activée' if enable else 'désactivée'
+    # Si on active avec code TOTP, vérifier le code avant d'activer
+    if enable and totp_code:
+        user = get_user(username)
+        if not user:
+            return jsonify({
+                'success': False,
+                'error': 'Utilisateur introuvable'
+            }), 404
+
+        # Vérifier le code TOTP directement (ne pas utiliser verify_totp car la 2FA n'est pas encore activée)
+        totp = pyotp.TOTP(user['totp_secret'])
+        if not totp.verify(totp_code, valid_window=1):
+            return jsonify({
+                'success': False,
+                'error': 'Code d\'authentification invalide'
+            }), 400
+
+    # Si on désactive, le faire directement
+    if not enable:
+        if toggle_user_2fa(username, enable):
+            return jsonify({
+                'success': True,
+                'message': f'Double authentification désactivée pour {username}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Utilisateur introuvable'
+            }), 404
+
+    # Si on active sans code TOTP (première étape), générer le QR code
+    if enable and not totp_code:
+        # Générer un nouveau secret
+        toggle_user_2fa(username, False)  # Générer nouveau secret mais ne pas activer encore
+        user = get_user(username)
+
+        if not user:
+            return jsonify({
+                'success': False,
+                'error': 'Utilisateur introuvable'
+            }), 404
+
+        # Générer l'URI pour Google Authenticator
+        totp_uri = pyotp.TOTP(user['totp_secret']).provisioning_uri(
+            name=username,
+            issuer_name='DS MCO'
+        )
+
+        # Générer le QR code
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(totp_uri)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+
+        # Convertir en base64
+        buffer = io.BytesIO()
+        img.save(buffer, format='PNG')
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+
         return jsonify({
             'success': True,
-            'message': f'Double authentification {status} pour {username}'
+            'needs_confirmation': True,
+            'qr_code': f'data:image/png;base64,{qr_base64}',
+            'secret': user['totp_secret']
         })
-    else:
-        return jsonify({
-            'success': False,
-            'error': 'Utilisateur introuvable'
-        }), 404
+
+    # Si on active avec code TOTP (deuxième étape), activer la 2FA
+    if enable and totp_code:
+        if toggle_user_2fa(username, enable):
+            return jsonify({
+                'success': True,
+                'message': f'Double authentification activée pour {username}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Utilisateur introuvable'
+            }), 404
 
 # ===== FIN ROUTES API GESTION UTILISATEURS =====
 

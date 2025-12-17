@@ -401,6 +401,51 @@
             </div>
         </div>
 
+        <!-- Modal Activation 2FA -->
+        <div id="2fa-qr-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🔒 Activer la double authentification</h2>
+                    <button class="close-modal" onclick="close2FAQRModal()">&times;</button>
+                </div>
+                <div class="content-form">
+                    <input type="hidden" id="2fa-username" value="">
+
+                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid #1976d2;">
+                        <strong style="color: #1976d2;">📱 Instructions :</strong>
+                        <ol style="margin: 10px 0 0 20px; color: #1976d2;">
+                            <li>Ouvrez Google Authenticator sur votre téléphone</li>
+                            <li>Scannez le QR code ci-dessous</li>
+                            <li>Entrez le code à 6 chiffres généré pour confirmer</li>
+                        </ol>
+                    </div>
+
+                    <div style="text-align: center; margin: 20px 0;">
+                        <img id="2fa-qr-image" src="" alt="QR Code" style="max-width: 300px; border: 2px solid #e0e0e0; border-radius: 8px; padding: 10px; background: white;">
+                    </div>
+
+                    <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid #ffc107;">
+                        <strong style="color: #856404;">🔑 Secret (sauvegarde manuelle) :</strong>
+                        <div style="margin-top: 8px; padding: 8px; background: white; border-radius: 4px; font-family: monospace; word-break: break-all; color: #333;" id="2fa-secret-display"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Code d'authentification (6 chiffres)</label>
+                        <input type="text" id="2fa-totp-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" style="text-align: center; font-size: 1.5em; letter-spacing: 0.3em;">
+                    </div>
+
+                    <div id="2fa-qr-status" style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none;">
+                        <strong id="2fa-qr-status-text"></strong>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button class="btn" onclick="confirm2FAActivation()" style="flex: 1;">✅ Confirmer et activer</button>
+                        <button class="btn" onclick="close2FAQRModal()" style="flex: 1; background: #6c757d;">✖️ Annuler</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal Mise à jour -->
         <div id="update-modal" class="modal">
             <div class="modal-content">
@@ -2175,32 +2220,127 @@
         }
 
         function toggleUser2FA(username, enable) {
-            const action = enable ? 'activer' : 'désactiver';
-            if (!confirm(`Êtes-vous sûr de vouloir ${action} la double authentification pour "${username}" ?`)) {
-                return;
-            }
+            if (enable) {
+                // Pour activer, ouvrir la modal avec le QR code
+                open2FAQRModal(username);
+            } else {
+                // Pour désactiver, confirmation et appel direct
+                if (!confirm(`Êtes-vous sûr de vouloir désactiver la double authentification pour "${username}" ?\n\nUn nouveau code QR devra être scanné lors de la prochaine activation.`)) {
+                    return;
+                }
 
+                fetch(`/api/users/${username}/toggle-2fa`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        enable: false
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        loadUsers();
+                    } else {
+                        alert('❌ ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('❌ Erreur de connexion au serveur');
+                });
+            }
+        }
+
+        function open2FAQRModal(username) {
+            document.getElementById('2fa-username').value = username;
+            document.getElementById('2fa-totp-code').value = '';
+            document.getElementById('2fa-qr-status').style.display = 'none';
+
+            // Appel API pour obtenir le QR code
             fetch(`/api/users/${username}/toggle-2fa`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    enable: enable
+                    enable: true
                 })
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                    loadUsers();
+                if (data.success && data.needs_confirmation) {
+                    // Afficher le QR code
+                    document.getElementById('2fa-qr-image').src = data.qr_code;
+                    document.getElementById('2fa-secret-display').textContent = data.secret;
+                    document.getElementById('2fa-qr-modal').classList.add('active');
+                    document.body.classList.add('modal-open');
                 } else {
-                    alert('❌ ' + data.error);
+                    alert('❌ ' + (data.error || 'Erreur lors de la génération du QR code'));
                 }
             })
             .catch(error => {
                 console.error('Erreur:', error);
                 alert('❌ Erreur de connexion au serveur');
+            });
+        }
+
+        function close2FAQRModal() {
+            document.getElementById('2fa-qr-modal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+        }
+
+        function confirm2FAActivation() {
+            const username = document.getElementById('2fa-username').value;
+            const totpCode = document.getElementById('2fa-totp-code').value;
+            const statusDiv = document.getElementById('2fa-qr-status');
+            const statusText = document.getElementById('2fa-qr-status-text');
+
+            if (!totpCode || totpCode.length !== 6) {
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusText.textContent = '❌ Veuillez entrer un code à 6 chiffres';
+                return;
+            }
+
+            // Appel API pour confirmer l'activation avec le code TOTP
+            fetch(`/api/users/${username}/toggle-2fa`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    enable: true,
+                    totp_code: totpCode
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = '#d4edda';
+                    statusDiv.style.color = '#155724';
+                    statusText.textContent = '✅ ' + data.message;
+                    setTimeout(() => {
+                        close2FAQRModal();
+                        loadUsers();
+                    }, 1500);
+                } else {
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = '#f8d7da';
+                    statusDiv.style.color = '#721c24';
+                    statusText.textContent = '❌ ' + data.error;
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusText.textContent = '❌ Erreur de connexion au serveur';
             });
         }
 
