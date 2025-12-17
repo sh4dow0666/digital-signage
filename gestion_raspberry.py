@@ -131,6 +131,36 @@ def get_user(username):
     users = load_users()
     return next((u for u in users if u['username'] == username), None)
 
+def update_user_password(username, new_password):
+    """Met à jour le mot de passe d'un utilisateur"""
+    users = load_users()
+    for user in users:
+        if user['username'] == username:
+            user['password_hash'] = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            save_users(users)
+            return True
+    return False
+
+def delete_user(username):
+    """Supprime un utilisateur"""
+    users = load_users()
+    users = [u for u in users if u['username'] != username]
+    save_users(users)
+    return True
+
+def toggle_user_2fa(username, enable):
+    """Active ou désactive la 2FA pour un utilisateur"""
+    users = load_users()
+    for user in users:
+        if user['username'] == username:
+            user['2fa_enabled'] = enable
+            # Si on désactive, on peut optionnellement générer un nouveau secret
+            if not enable:
+                user['totp_secret'] = pyotp.random_base32()
+            save_users(users)
+            return True
+    return False
+
 def login_required(f):
     """Decorator pour protéger les routes nécessitant une authentification"""
     @wraps(f)
@@ -845,6 +875,141 @@ def apply_update():
             'success': False,
             'error': f'Erreur lors de l\'application de la mise à jour: {str(e)}'
         }), 500
+
+# ===== ROUTES API GESTION UTILISATEURS =====
+
+@app.route('/api/users', methods=['GET'])
+@login_required
+def get_users_api():
+    """Récupère la liste des utilisateurs (sans les mots de passe)"""
+    users = load_users()
+    # Enlever les informations sensibles
+    safe_users = []
+    for user in users:
+        safe_users.append({
+            'username': user['username'],
+            '2fa_enabled': user.get('2fa_enabled', False),
+            'created_at': user.get('created_at', 'N/A')
+        })
+    return jsonify({
+        'success': True,
+        'users': safe_users,
+        'current_user': session.get('username')
+    })
+
+@app.route('/api/users', methods=['POST'])
+@login_required
+def create_user_api():
+    """Crée un nouvel utilisateur"""
+    data = request.json
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+
+    if not username or not password:
+        return jsonify({
+            'success': False,
+            'error': 'Nom d\'utilisateur et mot de passe requis'
+        }), 400
+
+    if len(password) < 8:
+        return jsonify({
+            'success': False,
+            'error': 'Le mot de passe doit contenir au moins 8 caractères'
+        }), 400
+
+    user, error = create_user(username, password)
+
+    if error:
+        return jsonify({
+            'success': False,
+            'error': error
+        }), 400
+
+    return jsonify({
+        'success': True,
+        'message': f'Utilisateur {username} créé avec succès'
+    })
+
+@app.route('/api/users/<username>', methods=['PUT'])
+@login_required
+def update_user_api(username):
+    """Met à jour un utilisateur (mot de passe uniquement)"""
+    data = request.json
+    new_password = data.get('password', '')
+
+    if not new_password:
+        return jsonify({
+            'success': False,
+            'error': 'Nouveau mot de passe requis'
+        }), 400
+
+    if len(new_password) < 8:
+        return jsonify({
+            'success': False,
+            'error': 'Le mot de passe doit contenir au moins 8 caractères'
+        }), 400
+
+    if update_user_password(username, new_password):
+        return jsonify({
+            'success': True,
+            'message': f'Mot de passe de {username} mis à jour'
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'error': 'Utilisateur introuvable'
+        }), 404
+
+@app.route('/api/users/<username>', methods=['DELETE'])
+@login_required
+def delete_user_api(username):
+    """Supprime un utilisateur"""
+    # Empêcher la suppression de l'utilisateur connecté
+    if session.get('username') == username:
+        return jsonify({
+            'success': False,
+            'error': 'Vous ne pouvez pas supprimer votre propre compte'
+        }), 403
+
+    # Vérifier qu'il reste au moins un utilisateur
+    users = load_users()
+    if len(users) <= 1:
+        return jsonify({
+            'success': False,
+            'error': 'Impossible de supprimer le dernier utilisateur'
+        }), 403
+
+    if delete_user(username):
+        return jsonify({
+            'success': True,
+            'message': f'Utilisateur {username} supprimé'
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'error': 'Erreur lors de la suppression'
+        }), 500
+
+@app.route('/api/users/<username>/toggle-2fa', methods=['POST'])
+@login_required
+def toggle_2fa_api(username):
+    """Active ou désactive la 2FA pour un utilisateur"""
+    data = request.json
+    enable = data.get('enable', False)
+
+    if toggle_user_2fa(username, enable):
+        status = 'activée' if enable else 'désactivée'
+        return jsonify({
+            'success': True,
+            'message': f'Double authentification {status} pour {username}'
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'error': 'Utilisateur introuvable'
+        }), 404
+
+# ===== FIN ROUTES API GESTION UTILISATEURS =====
 
 @app.route('/restart-system', methods=['POST'])
 def restart_system():

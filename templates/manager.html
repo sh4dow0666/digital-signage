@@ -344,6 +344,59 @@
                     </div>
 
                     <button class="btn" onclick="saveSettings()">💾 Sauvegarder</button>
+
+                    <!-- Séparateur -->
+                    <hr style="margin: 30px 0; border: none; border-top: 2px solid #e0e0e0;">
+
+                    <!-- Section Gestion des Utilisateurs -->
+                    <h3 style="color: #667eea; margin-bottom: 15px;">👥 Gestion des Utilisateurs</h3>
+
+                    <div id="users-list-container" style="margin-bottom: 20px;">
+                        <!-- La liste des utilisateurs sera chargée ici -->
+                    </div>
+
+                    <button class="btn" onclick="openCreateUserModal()" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">➕ Créer un utilisateur</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Créer/Modifier Utilisateur -->
+        <div id="user-form-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="user-form-title">➕ Créer un utilisateur</h2>
+                    <button class="close-modal" onclick="closeUserFormModal()">&times;</button>
+                </div>
+                <div class="content-form">
+                    <input type="hidden" id="user-form-mode" value="create">
+                    <input type="hidden" id="user-form-original-username" value="">
+
+                    <div class="form-group" id="user-form-username-group">
+                        <label>Nom d'utilisateur</label>
+                        <input type="text" id="user-form-username" placeholder="Entrez le nom d'utilisateur" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label id="user-form-password-label">Mot de passe</label>
+                        <input type="password" id="user-form-password" placeholder="Entrez le mot de passe (min. 8 caractères)" required>
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            Le mot de passe doit contenir au moins 8 caractères
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Confirmer le mot de passe</label>
+                        <input type="password" id="user-form-password-confirm" placeholder="Confirmez le mot de passe" required>
+                    </div>
+
+                    <div id="user-form-status" style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none;">
+                        <strong id="user-form-status-text"></strong>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button class="btn" onclick="submitUserForm()" style="flex: 1;">💾 Enregistrer</button>
+                        <button class="btn" onclick="closeUserFormModal()" style="flex: 1; background: #6c757d;">✖️ Annuler</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1856,6 +1909,9 @@
                     console.error('Erreur lors du chargement des paramètres:', error);
                 });
 
+            // Charger les utilisateurs
+            loadUsers();
+
             document.getElementById('settings-modal').classList.add('active');
             document.body.classList.add('modal-open');
         }
@@ -1904,6 +1960,242 @@
                 statusDiv.style.color = '#721c24';
                 statusText.textContent = '❌ Erreur de connexion au serveur';
                 statusDiv.style.display = 'block';
+            });
+        }
+
+        // GESTION DES UTILISATEURS
+
+        let currentUsers = [];
+        let currentUserUsername = '';
+
+        function loadUsers() {
+            fetch('/api/users')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentUsers = data.users;
+                    currentUserUsername = data.current_user;
+                    displayUsersList();
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors du chargement des utilisateurs:', error);
+            });
+        }
+
+        function displayUsersList() {
+            const container = document.getElementById('users-list-container');
+
+            if (currentUsers.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center;">Aucun utilisateur</p>';
+                return;
+            }
+
+            let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+
+            currentUsers.forEach(user => {
+                const isCurrentUser = user.username === currentUserUsername;
+                const twoFAStatus = user['2fa_enabled'] ? '🔒 2FA activée' : '🔓 2FA désactivée';
+                const twoFAColor = user['2fa_enabled'] ? '#28a745' : '#ffc107';
+
+                html += `
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid ${isCurrentUser ? '#667eea' : '#dee2e6'};">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 5px;">
+                                    ${user.username}
+                                    ${isCurrentUser ? '<span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-left: 8px;">Vous</span>' : ''}
+                                </div>
+                                <div style="font-size: 0.9em; color: #666;">
+                                    <span style="color: ${twoFAColor}; font-weight: 600;">${twoFAStatus}</span>
+                                    <span style="margin-left: 10px;">Créé: ${new Date(user.created_at).toLocaleDateString('fr-FR')}</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                <button onclick="toggleUser2FA('${user.username}', ${!user['2fa_enabled']})"
+                                        style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: ${user['2fa_enabled'] ? '#ffc107' : '#28a745'}; color: white;">
+                                    ${user['2fa_enabled'] ? '🔓 Désactiver 2FA' : '🔒 Activer 2FA'}
+                                </button>
+                                <button onclick="openEditUserModal('${user.username}')"
+                                        style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: #007bff; color: white;">
+                                    ✏️ Modifier
+                                </button>
+                                ${!isCurrentUser ? `
+                                    <button onclick="deleteUser('${user.username}')"
+                                            style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: #dc3545; color: white;">
+                                        🗑️ Supprimer
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function openCreateUserModal() {
+            document.getElementById('user-form-mode').value = 'create';
+            document.getElementById('user-form-title').textContent = '➕ Créer un utilisateur';
+            document.getElementById('user-form-password-label').textContent = 'Mot de passe';
+            document.getElementById('user-form-username').value = '';
+            document.getElementById('user-form-password').value = '';
+            document.getElementById('user-form-password-confirm').value = '';
+            document.getElementById('user-form-status').style.display = 'none';
+            document.getElementById('user-form-username-group').style.display = 'block';
+            document.getElementById('user-form-modal').classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+
+        function openEditUserModal(username) {
+            document.getElementById('user-form-mode').value = 'edit';
+            document.getElementById('user-form-original-username').value = username;
+            document.getElementById('user-form-title').textContent = '✏️ Modifier le mot de passe';
+            document.getElementById('user-form-password-label').textContent = 'Nouveau mot de passe';
+            document.getElementById('user-form-username').value = username;
+            document.getElementById('user-form-password').value = '';
+            document.getElementById('user-form-password-confirm').value = '';
+            document.getElementById('user-form-status').style.display = 'none';
+            document.getElementById('user-form-username-group').style.display = 'none';
+            document.getElementById('user-form-modal').classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+
+        function closeUserFormModal() {
+            document.getElementById('user-form-modal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+        }
+
+        function submitUserForm() {
+            const mode = document.getElementById('user-form-mode').value;
+            const username = mode === 'create' ?
+                document.getElementById('user-form-username').value.trim() :
+                document.getElementById('user-form-original-username').value;
+            const password = document.getElementById('user-form-password').value;
+            const passwordConfirm = document.getElementById('user-form-password-confirm').value;
+            const statusDiv = document.getElementById('user-form-status');
+            const statusText = document.getElementById('user-form-status-text');
+
+            // Validation
+            if (mode === 'create' && !username) {
+                showUserFormStatus('❌ Nom d\'utilisateur requis', 'error');
+                return;
+            }
+
+            if (!password) {
+                showUserFormStatus('❌ Mot de passe requis', 'error');
+                return;
+            }
+
+            if (password.length < 8) {
+                showUserFormStatus('❌ Le mot de passe doit contenir au moins 8 caractères', 'error');
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                showUserFormStatus('❌ Les mots de passe ne correspondent pas', 'error');
+                return;
+            }
+
+            const url = mode === 'create' ? '/api/users' : `/api/users/${username}`;
+            const method = mode === 'create' ? 'POST' : 'PUT';
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showUserFormStatus('✅ ' + data.message, 'success');
+                    setTimeout(() => {
+                        closeUserFormModal();
+                        loadUsers();
+                    }, 1500);
+                } else {
+                    showUserFormStatus('❌ ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showUserFormStatus('❌ Erreur de connexion au serveur', 'error');
+            });
+        }
+
+        function showUserFormStatus(message, type) {
+            const statusDiv = document.getElementById('user-form-status');
+            const statusText = document.getElementById('user-form-status-text');
+
+            statusDiv.style.display = 'block';
+            statusText.textContent = message;
+
+            if (type === 'success') {
+                statusDiv.style.background = '#d4edda';
+                statusDiv.style.color = '#155724';
+            } else {
+                statusDiv.style.background = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+            }
+        }
+
+        function deleteUser(username) {
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur "${username}" ?`)) {
+                return;
+            }
+
+            fetch(`/api/users/${username}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    loadUsers();
+                } else {
+                    alert('❌ ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('❌ Erreur de connexion au serveur');
+            });
+        }
+
+        function toggleUser2FA(username, enable) {
+            const action = enable ? 'activer' : 'désactiver';
+            if (!confirm(`Êtes-vous sûr de vouloir ${action} la double authentification pour "${username}" ?`)) {
+                return;
+            }
+
+            fetch(`/api/users/${username}/toggle-2fa`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    enable: enable
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    loadUsers();
+                } else {
+                    alert('❌ ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('❌ Erreur de connexion au serveur');
             });
         }
 
