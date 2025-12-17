@@ -1309,13 +1309,9 @@ def handle_update_screen_config(data):
                 'show_clock': screens[screen_id]['show_clock']
             }, room=screens[screen_id]['sid'])
 
-        # Mettre à jour tous les gestionnaires
-        emit('state_update', {
-            'screens': screens,
-            'content': content_library,
-            'playlists': playlists,
-            'schedules': schedules
-        }, broadcast=True)
+        # NE PAS envoyer de state_update complet pour les changements de config
+        # Cela évite d'interrompre les playlists prioritaires en cours
+        # Les gestionnaires recevront la mise à jour via le prochain state_update normal
 
 @socketio.on('update_debug_info')
 def handle_update_debug_info(data):
