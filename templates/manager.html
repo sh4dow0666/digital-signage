@@ -2014,17 +2014,17 @@
                             <div style="display: flex; gap: 5px; flex-wrap: wrap;">
                                 ${isCurrentUser ? `
                                     <button onclick="toggleUser2FA('${user.username}', ${!user['2fa_enabled']})"
-                                            style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: ${user['2fa_enabled'] ? '#ffc107' : '#28a745'}; color: white;">
+                                            style="padding: 6px 12px; border: none; border-radius: 25px; cursor: pointer; font-size: 0.9em; background: ${user['2fa_enabled'] ? '#ffc107' : '#28a745'}; color: white;">
                                         ${user['2fa_enabled'] ? '🔓 Désactiver 2FA' : '🔒 Activer 2FA'}
                                     </button>
                                 ` : ''}
                                 <button onclick="openEditUserModal('${user.username}')"
-                                        style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                                        style="padding: 6px 12px; border: none; border-radius: 25px; cursor: pointer; font-size: 0.9em; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
                                     ✏️ Éditer
                                 </button>
                                 ${!isCurrentUser ? `
                                     <button onclick="deleteUser('${user.username}')"
-                                            style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                                            style="padding: 6px 12px; border: none; border-radius: 25px; cursor: pointer; font-size: 0.9em; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                                         🗑️
                                     </button>
                                 ` : ''}
