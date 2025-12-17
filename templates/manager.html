@@ -1995,7 +1995,7 @@
 
             currentUsers.forEach(user => {
                 const isCurrentUser = user.username === currentUserUsername;
-                const twoFAStatus = user['2fa_enabled'] ? '🔒' : '🔓';
+                const twoFAStatus = user['2fa_enabled'] ? '🔒 2FA actif' : '🔓 2FA inactif';
                 const twoFAColor = user['2fa_enabled'] ? '#28a745' : '#ffc107';
 
                 html += `
@@ -2004,10 +2004,10 @@
                             <div style="flex: 1; min-width: 200px;">
                                 <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 5px;">
                                     ${user.username}
+                                    <span style="color: ${twoFAColor}; font-weight: 600;">${twoFAStatus}</span>
                                     ${isCurrentUser ? '<span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-left: 8px;">Vous</span>' : ''}
                                 </div>
                                 <div style="font-size: 0.9em; color: #666;">
-                                    <span style="color: ${twoFAColor}; font-weight: 600;">${twoFAStatus}</span>
                                     <span style="margin-left: 10px;">Créé: ${new Date(user.created_at).toLocaleDateString('fr-FR')}</span>
                                 </div>
                             </div>
@@ -2019,13 +2019,13 @@
                                     </button>
                                 ` : ''}
                                 <button onclick="openEditUserModal('${user.username}')"
-                                        style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: #007bff; color: white;">
-                                    ✏️ Modifier
+                                        style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                                    ✏️ Éditer
                                 </button>
                                 ${!isCurrentUser ? `
                                     <button onclick="deleteUser('${user.username}')"
-                                            style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: #dc3545; color: white;">
-                                        🗑️ Supprimer
+                                            style="padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                                        🗑️
                                     </button>
                                 ` : ''}
                             </div>
