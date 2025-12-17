@@ -125,6 +125,9 @@
                             <p style="text-align: center; color: #999;">Aucun contenu ajouté</p>
                         </div>
                     </div>
+                    <div id="playlist_details" style="margin-top: 15px; padding: 10px; background: #667eea; color: white; border-radius: 8px; text-align: center; font-weight: bold;">
+                        📊 0 contenu(s) | Durée totale: 0s 
+                    </div>
                     <button class="btn btn-playlist" onclick="saveEditedPlaylist()">💾 Sauvegarder la Playlist</button>
                 </div>
             </div>
@@ -975,10 +978,15 @@
                 container.appendChild(div);
             });
 
+            /*
             const summary = document.createElement('div');
             summary.style.cssText = 'margin-top: 15px; padding: 10px; background: #667eea; color: white; border-radius: 8px; text-align: center; font-weight: bold;';
             summary.innerHTML = `📊 ${editingPlaylist.length} contenu(s) | Durée totale: ${secondsToHMS(totalDuration)}`;
             container.appendChild(summary);
+            */
+            
+            const summary_container = document.getElementById('playlist_details');
+            summary_container.innerHTML = `📊 ${editingPlaylist.length} contenu(s) | Durée totale: ${secondsToHMS(totalDuration)}`;
         }
 
         function saveEditedPlaylist() {

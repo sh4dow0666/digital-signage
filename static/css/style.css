@@ -1,4 +1,4 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; scrollbar-width: thin;}
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -43,10 +43,12 @@ h2 {
     border-bottom: 3px solid #667eea;
 }
 .screen-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
     gap: 15px;
     margin-top: 20px;
+    overflow-x: auto;
+    height: 260px;
 }
 .screen-card {
     background: white;
@@ -54,6 +56,8 @@ h2 {
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transition: transform 0.3s, box-shadow 0.3s;
+    min-width: 250px;
+    height: 220px;
 }
 .screen-card:hover {
     transform: translateY(-5px);
@@ -519,6 +523,8 @@ input:focus, select:focus, textarea:focus {
     border-radius: 8px;
     padding: 10px;
     background: #fafafa;
+    max-height: 320px;
+    overflow-y: auto;
 }
 
 /* Drag and Drop pour les playlists */
