@@ -2036,9 +2036,16 @@
                 return;
             }
 
+            // Trier les utilisateurs : l'utilisateur connecté en premier
+            const sortedUsers = [...currentUsers].sort((a, b) => {
+                if (a.username === currentUserUsername) return -1;
+                if (b.username === currentUserUsername) return 1;
+                return 0;
+            });
+
             let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
 
-            currentUsers.forEach(user => {
+            sortedUsers.forEach(user => {
                 const isCurrentUser = user.username === currentUserUsername;
                 const twoFAStatus = user['2fa_enabled'] ? '🔒' : '🔓';
                 const twoFAColor = user['2fa_enabled'] ? '#28a745' : '#ffc107';
