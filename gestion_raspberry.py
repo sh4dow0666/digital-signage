@@ -184,6 +184,26 @@ def toggle_user_2fa(username, enable):
             return True
     return False
 
+def generate_new_2fa_secret(username):
+    """Génère un nouveau secret 2FA pour un utilisateur (sans changer le statut enabled)"""
+    users = load_users()
+    for user in users:
+        if user['username'] == username:
+            user['totp_secret'] = pyotp.random_base32()
+            save_users(users)
+            return True
+    return False
+
+def set_2fa_enabled(username, enable):
+    """Active ou désactive la 2FA pour un utilisateur (sans toucher au secret)"""
+    users = load_users()
+    for user in users:
+        if user['username'] == username:
+            user['2fa_enabled'] = enable
+            save_users(users)
+            return True
+    return False
+
 def login_required(f):
     """Decorator pour protéger les routes nécessitant une authentification"""
     @wraps(f)
@@ -1088,8 +1108,7 @@ def toggle_2fa_api(username):
 
     # Si on active sans code TOTP (première étape), générer le QR code
     if enable and not totp_code:
-        # Générer un nouveau secret
-        toggle_user_2fa(username, False)  # Générer nouveau secret mais ne pas activer encore
+        # Utiliser le secret existant (déjà généré à la création ou lors de la dernière désactivation)
         user = get_user(username)
 
         if not user:
@@ -1122,9 +1141,9 @@ def toggle_2fa_api(username):
             'secret': user['totp_secret']
         })
 
-    # Si on active avec code TOTP (deuxième étape), activer la 2FA
+    # Si on active avec code TOTP (deuxième étape), activer la 2FA sans toucher au secret
     if enable and totp_code:
-        if toggle_user_2fa(username, enable):
+        if set_2fa_enabled(username, True):
             return jsonify({
                 'success': True,
                 'message': f'Double authentification activée pour {username}'
