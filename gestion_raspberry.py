@@ -822,7 +822,7 @@ def apply_update():
             cwd=git_repo_path,
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=15
         )
 
         if pull_result.returncode != 0:
