@@ -69,7 +69,7 @@ apt-get install -y \
     dnsmasq \
     dhcpcd5 \
     git \
-    fail2ban
+    fail2ban iptables
 
 # Désactiver hostapd et dnsmasq par défaut (seront activés si besoin)
 # D'abord unmask si nécessaire, puis arrêter et désactiver
@@ -168,6 +168,8 @@ BEGIN { in_sshd=0 }
     print "maxretry = 5"
     print "bantime  = 1h"
     print "findtime = 10m"
+    print "filter = sshd"
+    print "banaction = iptables-multiport"
     in_sshd=1
     next
 }
