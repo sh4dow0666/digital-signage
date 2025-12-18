@@ -349,7 +349,7 @@
                     <hr style="margin: 30px 0; border: none; border-top: 2px solid #e0e0e0;">
 
                     <!-- Section Gestion des Utilisateurs -->
-                    <h3 style="color: #667eea; margin-bottom: 15px;">👥 Gestion des Utilisateurs</h3>
+                    <h3 style="color: #667eea; margin-bottom: 15px;">👥 Gestion des Utilisateurs <span id="users-count" style="color: #999;">(0)</span></h3>
 
                     <div id="users-list-container" style="margin-bottom: 20px; border: 1px solid #e0e0e0;border-radius: 8px;padding: 10px;background: #fafafa; max-height: 250px; overflow-y: auto;">
                         <!-- La liste des utilisateurs sera chargée ici -->
@@ -2030,6 +2030,10 @@
 
         function displayUsersList() {
             const container = document.getElementById('users-list-container');
+            const countElement = document.getElementById('users-count');
+
+            // Mettre à jour le compteur
+            countElement.textContent = `(${currentUsers.length})`;
 
             if (currentUsers.length === 0) {
                 container.innerHTML = '<p style="color: #666; text-align: center;">Aucun utilisateur</p>';
