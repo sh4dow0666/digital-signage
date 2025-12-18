@@ -343,27 +343,9 @@ def login():
             if verify_password(username, password):
                 user = get_user(username)
                 if user and user.get('2fa_enabled'):
-                    # 2FA activé, demander le code et afficher le QR code
+                    # 2FA activé, demander le code
                     session['pending_username'] = username
-
-                    # Générer le QR code
-                    totp_uri = pyotp.TOTP(user['totp_secret']).provisioning_uri(
-                        name=username,
-                        issuer_name='DS MCO'
-                    )
-                    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-                    qr.add_data(totp_uri)
-                    qr.make(fit=True)
-                    img = qr.make_image(fill_color="black", back_color="white")
-                    buffer = io.BytesIO()
-                    img.save(buffer, format='PNG')
-                    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-                    return render_template('login.html',
-                                         show_2fa_step=True,
-                                         info="Entrez votre code d'authentification",
-                                         qr_code=f'data:image/png;base64,{qr_base64}',
-                                         secret=user['totp_secret'])
+                    return render_template('login.html', show_2fa_step=True, info="Entrez votre code d'authentification")
                 else:
                     # Pas de 2FA, connexion directe
                     session['username'] = username
@@ -382,28 +364,7 @@ def login():
                 session.pop('pending_username', None)
                 return redirect(url_for('index'))
             else:
-                # Régénérer le QR code pour le réafficher en cas d'erreur
-                user = get_user(pending_username)
-                if user:
-                    totp_uri = pyotp.TOTP(user['totp_secret']).provisioning_uri(
-                        name=pending_username,
-                        issuer_name='DS MCO'
-                    )
-                    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-                    qr.add_data(totp_uri)
-                    qr.make(fit=True)
-                    img = qr.make_image(fill_color="black", back_color="white")
-                    buffer = io.BytesIO()
-                    img.save(buffer, format='PNG')
-                    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-                    return render_template('login.html',
-                                         show_2fa_step=True,
-                                         error="Code d'authentification incorrect",
-                                         qr_code=f'data:image/png;base64,{qr_base64}',
-                                         secret=user['totp_secret'])
-                else:
-                    return render_template('login.html', show_2fa_step=True, error="Code d'authentification incorrect")
+                return render_template('login.html', show_2fa_step=True, error="Code d'authentification incorrect")
 
     return render_template('login.html')
 
