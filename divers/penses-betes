@@ -1,0 +1,50 @@
+ajouter du bouton "actions groupées" pour afficher un contenu sur plusieurs écrans d'un coup et de la modal "actions groupées"
+ajouter un bouton "éditer" pour les contenu et de la modale "éditer le contenu" pour éditer le contenu
+ajouter la possibilité de mettre la durée d'un contenu personalisé
+tronquage des liens "https" trop longs dans le conteneur "Bibliothèque"
+suppresion du bouton "actions groupées"  et de la modal "actions groupées"
+ajouter la fonctionnalitées "playlist", création du conteneur "playlist", des modals "créer une playlist", "éditer la playlist"
+ajouter un bouton supprimer pour les playlist dans le conteneur "playlist"
+ajouter d'un bouton "planning" pour pouvoir créer des plage horaires pour les playlist
+corriger les problèmes de syncronisation automatique qui ne s'effectue pas
+modification de l'indicateur d'état de connection des écran pour etre plus minimaliste
+ajouter l'affichage de la durée des contenu dans le conteneur "bibliothèque" (à coté du lien https) et en dessous des playlist dans le conteneur "playlist"
+contenu actuel et playlist active dans le debug ne fonctionne pas 
+configuration d'écran ne fonctionne pas et n'à pas les fonctionnalitées souhaité
+affichage debug sur player ne fonctionne pas
+screen info (affichage de contenu en cours) ne fonctionne pas et n'a plus la fonctionnalitées voulu
+actualisation automatique des écran qui marcherai peut etre plus
+dans player le debug affiche aucun contenu alors qu'il y a du contenu et affiche la durée totale et le temps écoulé seulement en seconde
+dans Écrans Connectés quand il y a aucune playlist en cours l'icon disparait
+pouvoir importer des image (fichier) sur les écrans
+dans la liste des "écrans connectés" quand le nom d'un contenu ou d'une playlist est trop long le tronquer (ajouter ...) affichage complet en survolant le nom avec la souris
+-armonisation et réogranisation des icons des playlist et contenu dans: le conteneur "écrans cuisine", "écrans bureau", "playlist" et dans les modals: "Debug-ecran", "créer une playlist", "ajouter un contenu"
+ajouter un bouton "important(ou un autre nom)" en haut à droite du conteneur "Écrans Connectés" pour afficher un contenu ou une playlist en priorité mettant en arret tous les activitées en cours et quand les activitées reprenne repprendre la playlist à l'horaire que les contenu a était relancer
+ changer le design des bouton "configurer" et "planning" dans le conteneur "Écrans Connectés"
+empecher l'utilisateur de pour mettre un planning dans une plage horaire deja  existante dans le modal "planifier l'écran"
+ajouter du bouton debug en haut à droite du conteneur "écran" et de la modal "debug-ecran ..."
+quand le configurateur d'écran lance un contenu indiqué il ne respecte pas la durée du contenu en question
+tronquer les noms trop long dans le "debug panel" 
+La fonctionnalitée de débug dans le gestionnaire d'écran ne marche plus
+faire l'interface du site en responsive
+Ajouter un ongelt paramètre en haut à Droite du conteneur "Gestionnaire d'Affichage Multi-Écrans"
+ajouter la clé youtube dans l'interface "Gestionnaire d'Affichage Multi-Écrans"
+Le rafraichissement automatique ne marche pas quand on est sur le raspberry
+quand on supprime une playlist le contenu ne se mets pas à jours automatiquement
+L'affichage "manager" ne voit plus les écrans alors qu'ils sont connectés
+ajouter un bouton "éditer" dans la modal "Planifier l'écran" pour pouvoir modifier une plage horaire 
+ajouter un bouton redémarrer dans la modal mise à jour
+pouvoir arreter les écrans ou les redemarrer
+pouvoir rafraichir les écrans
+ajouter un bouton shutdown et redémarrage en haut à droite du conteneur "Gestionnaire d'Affichage Multi-Écrans"
+corriger le problème de syncronisation quand on modifer le contenu dans une playlist déjà en cours il ne s'actualise pas sur le nouveau contenu modifier ou ajouter de la playlist en question
+dans le message "Image uploadée" tronqué le nom trop long
+pouvoir ajouter un écran depuis le gestionnaire d'affiche multi-écrans
+pouvoir changer l'ordre des contenus d'une playlist en faisant glisser le contenu avec la souris
+pouvoir changer l'ordre des playlist tout en gardant la plage horaire de la playlist remplacer en faisant glisser le contenu avec la souris
+quand on modifie la durée d'un contenu le meme contenu dans une playlist la durée ne ce mets pas à jour 
+quand dans une playlist il y a un seul contenu ignoré la durée du contenu concerné en adaptant la durée du contenu à la plage horaire définie de cette playlist et remettre à la normal si on rajoute un 2ème contenu à cette playlist
+ajouter un screen info "affichage prioritaire" pour chaque écrans
+pouvoir changer de style d'affichage pour les "screens cards" dans les paramètres
+ajout du bouton "déconnexion" dans le menu contextuel d'alimentation
+ajuster la taille du conteneur pour la 2FA
